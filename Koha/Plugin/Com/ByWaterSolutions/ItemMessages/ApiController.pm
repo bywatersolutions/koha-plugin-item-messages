@@ -31,7 +31,6 @@ sub list_item_messages {
     my $c = shift->openapi->valid_input or return;
 
     my $itemnumber = $c->validation->param('item_id');
-    warn "ITEMNUMBER: $itemnumber";
 
     if ( !Koha::Items->search({ itemnumber => $itemnumber })->count > 0 ) {
         return $c->render(
@@ -61,103 +60,120 @@ sub list_item_messages {
 }
 
 sub get_item_message {
-    my ( $c, $args, $cb ) = @_;
+    require Koha::Item::Message;
+    require Koha::Item::Messages;
 
-    if ( !Koha::Items->search( { itemnumber => $args->{itemnumber} } )->count > 0 ) {
-        return $c->$cb( { error => 'Item not found' }, 400 );
+    my $c = shift->openapi->valid_input or return;
+
+    my $itemnumber = $c->validation->param('item_id');
+    my $item_message_id = $c->validation->param('item_message_id');
+
+    if ( !Koha::Items->search( { itemnumber => $itemnumber } )->count > 0 ) {
+        return $c->render(
+            status => 400,
+            openapi => { error => "Item not found" }
+        );
     }
 
     return try {
         my $item_message
             = Koha::Item::Messages->search(
-            { itemnumber => $args->{itemnumber}, item_message_id => $args->{item_message_id} } )
+            { itemnumber => $itemnumber, item_message_id => $item_message_id } )
             ->next;
         if ($item_message) {
-            return $c->$cb( $item_message, 200 );
+            return $c->render( status => 200, openapi => $item_message );
         }
         else {
-            return $c->$cb( { error => 'Item message not found' }, 400 );
+            return $c->render( status => 400, openapi => { error => 'Item message not found' } );
         }
     }
     catch {
         if ( $_->isa('DBIx::Class::Exception') ) {
-            return $c->$cb( { error => $_->{msg} }, 500 );
+            return $c->render( status => 500, openapi => { error => $_->{msg} } );
         }
         else {
-            return $c->$cb( { error => "Something went wrong, check the logs." }, 500 );
+            return $c->render( status => 500, openapi => { error => "Something went wrong, check the logs." } );
         }
     };
 }
 
 sub add_item_message {
-    my ( $c, $args, $cb ) = @_;
+    require Koha::Item::Message;
+    require Koha::Item::Messages;
 
-    my $item_message = Koha::Item::Message->new( $args->{body} );
-    $item_message->itemnumber( $args->{itemnumber} );
+    my $c = shift->openapi->valid_input or return;
+
+    my $itemnumber = $c->validation->param('item_id');
+    my $body       = $c->validation->param('body');
+warn "DATA: " . Data::Dumper::Dumper( $body );
+
+    my $item_message = Koha::Item::Message->new( $body );
+    $item_message->itemnumber( $itemnumber );
 
     return try {
         $item_message->store();
         $item_message = Koha::Item::Messages->find( $item_message->id );
-        return $c->$cb( $item_message, 200 );
+        return $c->render( status => 200, openapi => $item_message );
     }
     catch {
         if ( $_->isa('DBIx::Class::Exception') ) {
-            return $c->$cb( { error => $_->msg }, 500 );
+            return $c->render( status => 500, openapi => { error => $_->{msg} } );
         }
         else {
-            return $c->$cb( { error => "Something went wrong, check the logs." }, 500 );
+            return $c->render( status => 500, openapi => { error => "Something went wrong, check the logs." } );
         }
     };
 }
 
 sub update_item_message {
-    my ( $c, $args, $cb ) = @_;
+    my $c = shift->openapi->valid_input or return;
+
+    my $itemnumber      = $c->validation->param('item_id');
+    my $item_message_id = $c->validation->param('item_message_id');
+    my $body            = $c->validation->param('body');
 
     my $item_message;
 
     return try {
         $item_message
             = Koha::Item::Messages->search(
-            { itemnumber => $args->{itemnumber}, item_message_id => $args->{item_message_id} } )
+            { itemnumber => $itemnumber, item_message_id => $item_message_id } )
             ->next;
-        $item_message->set( $args->{body} );
+        $item_message->set( $body );
         $item_message->store();
-        return $c->$cb( $item_message, 200 );
+        return $c->render( status => 200, openapi => $item_message );
     }
     catch {
-        if ( not defined $item_message ) {
-            return $c->$cb( { error => "Item message not found" }, 404 );
-        }
-        elsif ( $_->isa('Koha::Exceptions::Object') ) {
-            return $c->$cb( { error => $_->message }, 500 );
+        if ( $_->isa('DBIx::Class::Exception') ) {
+            return $c->render( status => 500, openapi => { error => $_->{msg} } );
         }
         else {
-            return $c->$cb( { error => "Something went wrong, check the logs." }, 500 );
+            return $c->render( status => 500, openapi => { error => "Something went wrong, check the logs." } );
         }
     };
 
 }
 
 sub delete_item_message {
-    my ( $c, $args, $cb ) = @_;
+    my $c = shift->openapi->valid_input or return;
+
+    my $itemnumber      = $c->validation->param('item_id');
+    my $item_message_id = $c->validation->param('item_message_id');
 
     my $item_message;
 
     return try {
         $item_message = Koha::Item::Messages->search(
-            { itemnumber => $args->{itemnumber}, item_message_id => $args->{item_message_id} } );
+            { itemnumber => $itemnumber, item_message_id => $item_message_id } );
         $item_message->delete;
-        return $c->$cb( q{}, 200 );
+        return $c->render( status => 200, openapi => {} );
     }
     catch {
-        if ( not defined $item_message ) {
-            return $c->$cb( { error => "Item message not found" }, 404 );
-        }
-        elsif ( $_->isa('DBIx::Class::Exception') ) {
-            return $c->$cb( { error => $_->msg }, 500 );
+        if ( $_->isa('DBIx::Class::Exception') ) {
+            return $c->render( status => 500, openapi => { error => $_->{msg} } );
         }
         else {
-            return $c->$cb( { error => "Something went wrong, check the logs." }, 500 );
+            return $c->render( status => 500, openapi => { error => "Something went wrong, check the logs." } );
         }
     };
 }

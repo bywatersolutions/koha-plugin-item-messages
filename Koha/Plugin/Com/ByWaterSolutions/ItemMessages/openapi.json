@@ -88,7 +88,7 @@
       }
     }
   },
-  "/items/{itemnumber}/messages/{item_message_id}": {
+  "/items/{item_id}/messages/{item_message_id}": {
     "get": {
       "x-mojo-to": "Com::ByWaterSolutions::ItemMessages::ApiController#get_item_message",
       "operationId": "getItemMessage",
@@ -98,52 +98,18 @@
       ],
       "parameters": [
         {
+          "name": "item_id",
+          "in": "path",
+          "description": "Internal item identifier",
+          "required": true,
+          "type": "integer"
+        },
+        {
           "name": "item_message_id",
           "in": "path",
           "description": "Internal item message identifier",
           "required": true,
           "type": "integer"
-        },
-        {
-          "name": "body",
-          "in": "body",
-          "description": "A JSON object containing informations about the new message",
-          "required": true,
-          "schema": {
-            "type": "object",
-            "properties": {
-              "item_message_id": {
-                "type": "integer",
-                "description": "internal item message identifier",
-                "readOnly": true
-              },
-              "itemnumber": {
-                "type": "integer",
-                "description": "internal item identifier",
-                "readOnly": true
-              },
-              "type": {
-                "type": [
-                  "string",
-                  "null"
-                ],
-                "description": "date and time the item message was created"
-              },
-              "message": {
-                "type": "string",
-                "description": "date and time the item message was created"
-              },
-              "created_on": {
-                "type": "string",
-                "description": "date and time the item message was created"
-              }
-            },
-            "additionalProperties": false,
-            "required": [
-              "itemnumber",
-              "message"
-            ]
-          }
         }
       ],
       "produces": [
@@ -151,37 +117,7 @@
       ],
       "responses": {
         "200": {
-          "description": "An item messge",
-          "schema": {
-            "type": "object",
-            "properties": {
-              "item_message_id": {
-                "type": "integer",
-                "description": "internal item message identifier",
-                "readOnly": true
-              },
-              "itemnumber": {
-                "type": "integer",
-                "description": "internal item identifier",
-                "readOnly": true
-              },
-              "type": {
-                "type": [
-                  "string",
-                  "null"
-                ],
-                "description": "date and time the item message was created"
-              },
-              "message": {
-                "type": "string",
-                "description": "date and time the item message was created"
-              },
-              "created_on": {
-                "type": "string",
-                "description": "date and time the item message was created"
-              }
-            }
-          }
+          "description": "An item messge"
         }
       },
       "x-koha-authorization": {
