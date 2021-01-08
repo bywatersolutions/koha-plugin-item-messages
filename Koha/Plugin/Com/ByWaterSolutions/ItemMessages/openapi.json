@@ -1,7 +1,7 @@
 {
-  "/items/{itemnumber}/messages": {
+  "/items/{item_id}/messages": {
     "get": {
-      "x-mojo-to": "Koha::Plugin::Com::ByWaterSolutions::ItemMessages::ApiController#list_item_messages",
+      "x-mojo-to": "Com::ByWaterSolutions::ItemMessages::ApiController#list_item_messages",
       "operationId": "listItemMessages",
       "tags": [
         "items",
@@ -31,7 +31,7 @@
       }
     },
     "post": {
-      "x-mojo-to": "Koha::Plugin::Com::ByWaterSolutions::ItemMessages::ApiController#add_item_message",
+      "x-mojo-to": "Com::ByWaterSolutions::ItemMessages::ApiController#add_item_message",
       "operationId": "addItemMessage",
       "tags": [
         "items",
@@ -90,7 +90,7 @@
   },
   "/items/{itemnumber}/messages/{item_message_id}": {
     "get": {
-      "x-mojo-to": "Koha::Plugin::Com::ByWaterSolutions::ItemMessages::ApiController#get_item_message",
+      "x-mojo-to": "Com::ByWaterSolutions::ItemMessages::ApiController#get_item_message",
       "operationId": "getItemMessage",
       "tags": [
         "items",
@@ -191,7 +191,7 @@
       }
     },
     "put": {
-      "x-mojo-to": "Koha::Plugin::Com::ByWaterSolutions::ItemMessages::ApiController#update_item_message",
+      "x-mojo-to": "Com::ByWaterSolutions::ItemMessages::ApiController#update_item_message",
       "operationId": "updateItemMessage",
       "tags": [
         "items",
@@ -268,7 +268,7 @@
       }
     },
     "delete": {
-      "x-mojo-to": "Koha::Plugin::Com::ByWaterSolutions::ItemMessages::ApiController#delete_item_message",
+      "x-mojo-to": "Com::ByWaterSolutions::ItemMessages::ApiController#delete_item_message",
       "operationId": "deleteItemMessage",
       "tags": [
         "items",

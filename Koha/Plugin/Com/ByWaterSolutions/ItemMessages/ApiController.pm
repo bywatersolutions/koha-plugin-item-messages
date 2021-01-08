@@ -20,29 +20,42 @@ use Modern::Perl;
 use Mojo::Base 'Mojolicious::Controller';
 
 use Koha::Items;
-use Koha::Item::Message;
-use Koha::Item::Messages;
 use Koha::DateUtils;
 
 use Try::Tiny;
 
 sub list_item_messages {
-    my ( $c, $args, $cb ) = @_;
+    require Koha::Item::Message;
+    require Koha::Item::Messages;
 
-    if ( !Koha::Items->search({ itemnumber => $args->{itemnumber} })->count > 0 ) {
-        return $c->$cb( { error => 'Item not found' }, 400 );
+    my $c = shift->openapi->valid_input or return;
+
+    my $itemnumber = $c->validation->param('item_id');
+    warn "ITEMNUMBER: $itemnumber";
+
+    if ( !Koha::Items->search({ itemnumber => $itemnumber })->count > 0 ) {
+        return $c->render(
+            status => 400,
+            openapi => { error => 'Item not found' }
+        );
     }
 
     return try {
-        my $item_messages = Koha::Item::Messages->search({ itemnumber => $args->{itemnumber} });
-        return $c->$cb( $item_messages, 200 );
+        my $item_messages = Koha::Item::Messages->search({ itemnumber => $itemnumber });
+        return $c->render( status => 200, openapi => $item_messages );
     }
     catch {
         if ( $_->isa('DBIx::Class::Exception') ) {
-            return $c->$cb( { error => $_->{msg} }, 500 );
+            return $c->render(
+                status => 500,
+                openapi => { error => $_->{msg} }
+            );
         }
         else {
-            return $c->$cb( { error => "Something went wrong, check the logs." }, 500 );
+            return $c->render(
+                status => 500,
+                openapi => { error => "Something went wrong, check the logs." }
+            );
         }
     };
 }
