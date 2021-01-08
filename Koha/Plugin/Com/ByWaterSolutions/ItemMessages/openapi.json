@@ -1,48 +1,309 @@
 {
-  "/patrons/{patron_id}/bother": {
-    "put": {
-      "x-mojo-to": "Com::ByWaterSolutions::ItemMessages::BotherPatronController#bother",
-      "operationId": "BotherPatron",
-      "tags": ["patrons"],
-      "parameters": [{
-        "name": "patron_id",
-        "in": "path",
-        "description": "Internal patron identifier",
-        "required": true,
-        "type": "integer"
-      }],
+  "/items/{itemnumber}/messages": {
+    "get": {
+      "x-mojo-to": "Koha::Plugin::Com::ByWaterSolutions::ItemMessages::ApiController#list_item_messages",
+      "operationId": "listItemMessages",
+      "tags": [
+        "items",
+        "item_messages"
+      ],
+      "parameters": [
+        {
+          "name": "item_id",
+          "in": "path",
+          "description": "Internal item identifier",
+          "required": true,
+          "type": "integer"
+        }
+      ],
       "produces": [
         "application/json"
       ],
       "responses": {
         "200": {
-          "description": "A bothered patron",
-          "schema": {
-              "type": "object",
-                "properties": {
-                  "pissed": {
-                    "description": "If the patron got pissed",
-                    "type": "boolean"
-                  }
-                }
-          }
+          "description": "A list of item messages"
+        }
+      },
+      "x-koha-authorization": {
+        "permissions": {
+          "catalogue": "1"
+        }
+      }
+    },
+    "post": {
+      "x-mojo-to": "Koha::Plugin::Com::ByWaterSolutions::ItemMessages::ApiController#add_item_message",
+      "operationId": "addItemMessage",
+      "tags": [
+        "items",
+        "item_messages"
+      ],
+      "parameters": [
+        {
+          "name": "item_id",
+          "in": "path",
+          "description": "Internal item identifier",
+          "required": true,
+          "type": "integer"
         },
-        "404": {
-          "description": "An error occured",
+        {
+          "name": "body",
+          "in": "body",
+          "description": "A JSON object containing informations about the new message",
+          "required": true,
           "schema": {
-              "type": "object",
-                "properties": {
-                  "error": {
-                    "description": "An explanation for the error",
-                    "type": "string"
-                  }
-                }
+            "type": "object",
+            "properties": {
+              "type": {
+                "description": "message type",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "message": {
+                "description": "the content of the message",
+                "type": "string"
+              }
+            },
+            "required": [
+              "item_id",
+              "message"
+            ]
+          }
+        }
+      ],
+      "produces": [
+        "application/json"
+      ],
+      "responses": {
+        "200": {
+          "description": "item message json"
+        }
+      },
+      "x-koha-authorization": {
+        "allow-owner": true,
+        "permissions": {
+          "editcatalogue": "1"
+        }
+      }
+    }
+  },
+  "/items/{itemnumber}/messages/{item_message_id}": {
+    "get": {
+      "x-mojo-to": "Koha::Plugin::Com::ByWaterSolutions::ItemMessages::ApiController#get_item_message",
+      "operationId": "getItemMessage",
+      "tags": [
+        "items",
+        "item_messages"
+      ],
+      "parameters": [
+        {
+          "name": "item_message_id",
+          "in": "path",
+          "description": "Internal item message identifier",
+          "required": true,
+          "type": "integer"
+        },
+        {
+          "name": "body",
+          "in": "body",
+          "description": "A JSON object containing informations about the new message",
+          "required": true,
+          "schema": {
+            "type": "object",
+            "properties": {
+              "item_message_id": {
+                "type": "integer",
+                "description": "internal item message identifier",
+                "readOnly": true
+              },
+              "itemnumber": {
+                "type": "integer",
+                "description": "internal item identifier",
+                "readOnly": true
+              },
+              "type": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "date and time the item message was created"
+              },
+              "message": {
+                "type": "string",
+                "description": "date and time the item message was created"
+              },
+              "created_on": {
+                "type": "string",
+                "description": "date and time the item message was created"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "itemnumber",
+              "message"
+            ]
+          }
+        }
+      ],
+      "produces": [
+        "application/json"
+      ],
+      "responses": {
+        "200": {
+          "description": "An item messge",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "item_message_id": {
+                "type": "integer",
+                "description": "internal item message identifier",
+                "readOnly": true
+              },
+              "itemnumber": {
+                "type": "integer",
+                "description": "internal item identifier",
+                "readOnly": true
+              },
+              "type": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "date and time the item message was created"
+              },
+              "message": {
+                "type": "string",
+                "description": "date and time the item message was created"
+              },
+              "created_on": {
+                "type": "string",
+                "description": "date and time the item message was created"
+              }
+            }
           }
         }
       },
       "x-koha-authorization": {
         "permissions": {
-          "borrowers": "1"
+          "catalogue": "1"
+        }
+      }
+    },
+    "put": {
+      "x-mojo-to": "Koha::Plugin::Com::ByWaterSolutions::ItemMessages::ApiController#update_item_message",
+      "operationId": "updateItemMessage",
+      "tags": [
+        "items",
+        "item_messages"
+      ],
+      "parameters": [
+        {
+          "name": "item_id",
+          "in": "path",
+          "description": "Internal item identifier",
+          "required": true,
+          "type": "integer"
+        },
+        {
+          "name": "item_message_id",
+          "in": "path",
+          "description": "Internal item message identifier",
+          "required": true,
+          "type": "integer"
+        },
+        {
+          "name": "body",
+          "in": "body",
+          "description": "A JSON object representing an item message",
+          "required": true,
+          "schema": {
+            "type": "object",
+            "properties": {
+              "item_message_id": {
+                "type": "integer",
+                "description": "internal item message identifier",
+                "readOnly": true
+              },
+              "itemnumber": {
+                "type": "integer",
+                "description": "internal item identifier",
+                "readOnly": true
+              },
+              "type": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "date and time the item message was created"
+              },
+              "message": {
+                "type": "string",
+                "description": "date and time the item message was created"
+              },
+              "created_on": {
+                "type": "string",
+                "description": "date and time the item message was created"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "message"
+            ]
+          }
+        }
+      ],
+      "produces": [
+        "application/json"
+      ],
+      "responses": {
+        "200": {
+          "description": "item message json"
+        }
+      },
+      "x-koha-authorization": {
+        "permissions": {
+          "editcatalogue": "1"
+        }
+      }
+    },
+    "delete": {
+      "x-mojo-to": "Koha::Plugin::Com::ByWaterSolutions::ItemMessages::ApiController#delete_item_message",
+      "operationId": "deleteItemMessage",
+      "tags": [
+        "items",
+        "item_messages"
+      ],
+      "parameters": [
+        {
+          "name": "item_id",
+          "in": "path",
+          "description": "Internal item identifier",
+          "required": true,
+          "type": "integer"
+        },
+        {
+          "name": "item_message_id",
+          "in": "path",
+          "description": "Internal item message identifier",
+          "required": true,
+          "type": "integer"
+        }
+      ],
+      "produces": [
+        "application/json"
+      ],
+      "responses": {
+        "200": {
+          "description": "Item message deleted",
+          "schema": {
+            "type": "string"
+          }
+        }
+      },
+      "x-koha-authorization": {
+        "permissions": {
+          "editcatalogue": "1"
         }
       }
     }

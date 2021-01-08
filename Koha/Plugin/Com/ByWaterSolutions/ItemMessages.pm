@@ -7,8 +7,23 @@ use base qw(Koha::Plugins::Base);
 use C4::Auth;
 use C4::Context;
 use Koha::AuthorisedValues;
+use Koha::Schema;
 
+use Module::Metadata;
 use Mojo::JSON qw(decode_json to_json);
+
+BEGIN {
+    my $path = Module::Metadata->find_module_by_name(__PACKAGE__);
+    $path =~ s!\.pm$!/lib!;
+    unshift @INC, $path;
+
+    require Koha::Item::Messages;
+    require Koha::Item::Message;
+    require Koha::Schema::Result::ItemMessage;
+
+    Koha::Schema->register_class(ItemMessage => 'Koha::Schema::Result::ItemMessage');
+    Koha::Database->schema({ new => 1 });
+}
 
 our $VERSION = "{VERSION}";
 our $MINIMUM_VERSION = "{MINIMUM_VERSION}";

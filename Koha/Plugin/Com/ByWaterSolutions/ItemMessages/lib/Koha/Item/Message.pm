@@ -1,4 +1,4 @@
-package Koha::Plugin::Com::ByWaterSolutions::ItemMessages::BotherPatronController;
+package Koha::Item::Message;
 
 # This file is part of Koha.
 #
@@ -17,27 +17,28 @@ package Koha::Plugin::Com::ByWaterSolutions::ItemMessages::BotherPatronControlle
 
 use Modern::Perl;
 
-use Mojo::Base 'Mojolicious::Controller';
+use Carp;
+
+use Koha::Database;
+
+use base qw(Koha::Object);
+
+=head1 NAME
+
+Koha::Item::Message - Koha Message Object class
 
 =head1 API
 
 =head2 Class Methods
 
-=head3 Method that bothers the patron, with no side effects
+=cut
+
+=head3 type
 
 =cut
 
-sub bother {
-    my $c = shift->openapi->valid_input or return;
-
-    my $patron_id = $c->validation->param('patron_id');
-    my $patron    = Koha::Patrons->find($patron_id);
-
-    unless ($patron) {
-        return $c->render( status => 404, openapi => { error => "Patron not found." } );
-    }
-
-    return $c->render( status => 200, openapi => { bothered => Mojo::JSON->true } );
+sub _type {
+    return 'ItemMessage';
 }
 
 1;
