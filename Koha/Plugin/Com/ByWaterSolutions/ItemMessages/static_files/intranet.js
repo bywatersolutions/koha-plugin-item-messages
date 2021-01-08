@@ -4,17 +4,55 @@ import PropTypes from "https://unpkg.com/es-react@latest/dev/prop-types.js";
 import htm from "https://unpkg.com/htm@latest?module";
 const html = htm.bind(React.createElement);
 
-var item_messages = "[% To.json( item_messages ) %]";
 var CANCEL = _("Cancel");
 var ADD_MESSAGE = _("Add message");
 var ARE_YOU_SURE = _("Are you sure you want to delete the following message: ");
 
+var authorised_values;
 var av_descriptions = [];
 $( document ).ready(function() {
-    for (var i = 0; i < authorised_values.length; i++) {
-        var av = authorised_values[i];
-        av_descriptions[av.authorised_value] = av.lib;
-    }
+
+	const promise1 = $.ajax({
+	  dataType: "json",
+	  url: "/api/v1/contrib/item_messages/authorised_values",
+	  success: function(avs) {
+		authorised_values = avs;
+		for (var i = 0; i < authorised_values.length; i++) {
+			var av = authorised_values[i];
+			av_descriptions[av.authorised_value] = av.lib;
+		}
+	  }
+	});
+
+    Promise.all([promise1]).then( () => {
+		$("#catalogue_detail_biblio h3[id^=item]").each(function() {
+            const parts = this.id.split('item');
+			const itemnumber = parts[1];
+
+			let messages;
+			$.ajax({
+			  dataType: "json",
+			  url: `/api/v1/contrib/item_messages/items/${itemnumber}/messages`,
+			  async: false, 
+			  success: function(m) {
+				messages = m;
+			  }
+			});
+
+            $(`
+				<div class="listgroup">
+					<div id="item-messages-${itemnumber}" class="item-messages"></div>
+				</div>
+			`).insertAfter(this);
+
+			ReactDOM.render(
+				html`<${ItemMessages} itemnumber=${itemnumber} messages=${messages} />`,
+				document.getElementById(`item-messages-${itemnumber}`)
+			);
+
+		});
+    });
+
 
 //    $('.item-messages').each(function() {
 //        var itemnumber = parseInt( $(this).attr('id').split('item-messages-')[1] );
@@ -26,8 +64,13 @@ $( document ).ready(function() {
 });
 
 class ItemMessages extends React.Component {
-    getInitialState = () => {
-        return { messages: this.props.messages };
+    constructor(props, context) {
+		super(props, context);
+
+		this.state = {
+			itemnumber: props.itemnumber,
+			messages: props.messages || []
+		};
     }
 
     addMessage = (message) => {
@@ -42,9 +85,9 @@ class ItemMessages extends React.Component {
         var message = this.state.messages[index];
         var itemMessage = this;
         $.ajax({
-            url: '/api/v1/items/' + message.itemnumber + '/messages/' + message.item_message_id,
+            url: '/api/v1/contrib/item_messages/items/' + message.itemnumber + '/messages/' + message.item_message_id,
             type: 'DELETE',
-            success: function( result ) {
+            success: function() {
                 itemMessage.setState(function(state) {
                     var newData = state.messages.slice();
                     newData.splice(index, 1);
@@ -60,9 +103,9 @@ class ItemMessages extends React.Component {
                     <h4>Messages</h4>
                     <ol className="bibliodetails">
                         ${this.state.messages.map(function(message, index) {
-                            return html`<ItemMessage key=${message.item_message_id} message=${message} index=${index} onRemove=${item_messages.removeMessage} />`
+                            return html`<${ItemMessage} key=${message.item_message_id} message=${message} index=${index} onRemove=${item_messages.removeMessage} />`
                         })}
-                        <ItemMessageCreator itemnumber=${this.props.itemnumber} onAdd=${item_messages.addMessage}/>
+                        <${ItemMessageCreator} itemnumber=${this.props.itemnumber} onAdd=${item_messages.addMessage}/>
                     </ol>
                 </div>`;
     }
@@ -76,22 +119,26 @@ class ItemMessage extends React.Component {
     }
 
     render = () => {
-        return  html`<li>
-                    <span className="label">
-                        <i className="fa fa-minus-circle" onClick={this.removeMessage}></i>
-                        {av_descriptions[this.props.message.type]}
+        return  html`<ul>
+                    <span className="badge">
+                        ${av_descriptions[this.props.message.type]}
                     </span>
-                    {this.props.message.message}
-                </li>`;
+
+                    <span style=${{margin: ".5em"}}>${this.props.message.message}</span>
+
+				    <i className="fa fa-trash" onClick=${this.removeMessage}></i>
+                </ul>`;
     }
 }
 
 class ItemMessageCreator extends React.Component {
-    getInitialState = () => {
-        return {
+    constructor(props, context) {
+		super(props, context);
+
+		this.state = {
             message: "",
             type: authorised_values[0].authorised_value,
-        };
+		};
     }
 
     addMessage = () => {
@@ -102,7 +149,7 @@ class ItemMessageCreator extends React.Component {
         };
         $.ajax({
             type: 'POST',
-            url: '/api/v1/items/' + this.props.itemnumber + '/messages',
+            url: '/api/v1/contrib/item_messages/items/' + this.props.itemnumber + '/messages',
             data: JSON.stringify(item_message),
             success: function(data) {
                 self.cancelMessage();
@@ -116,7 +163,12 @@ class ItemMessageCreator extends React.Component {
     }
 
     cancelMessage = () => {
-        this.setState( this.getInitialState );
+        this.setState(
+		    {
+                message: "",
+                type: authorised_values[0].authorised_value,
+    		}
+        );
         return false;
     }
 
@@ -137,19 +189,19 @@ class ItemMessageCreator extends React.Component {
             );
         }
 
-        return  html`<li>
+        return  html`<ul>
                     <span className="label">
                         <select value=${this.state.type} onChange=${this.handleTypeChange}>
-                            {options}
+                            ${options}
                         </select>
                     </span>
-                    <input className="input-xlarge" type="text" value=${this.state.message} onChange=${this.handleContentChange} />
+                    <input style=${{margin: ".5em"}} className="input-xlarge" type="text" value=${this.state.message} onChange=${this.handleContentChange} />
                     <button className="submit" onClick=${this.addMessage}>
-                        <i className="fa fa-plus-circle"></i>&nbsp;
+                        <i className="fa fa-plus-circle"></i>
                         ${ADD_MESSAGE}
                     </button>
-                    <a href="javascript:void(0);" onClick=${this.cancelMessage}>${CANCEL}</a>
-                </li>`;
+                    <a style=${{margin: ".5em"}} href="#!" onClick=${this.cancelMessage}>${CANCEL}</a>
+                </ul>`;
       }
 }
 

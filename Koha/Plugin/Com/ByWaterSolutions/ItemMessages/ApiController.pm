@@ -105,7 +105,6 @@ sub add_item_message {
 
     my $itemnumber = $c->validation->param('item_id');
     my $body       = $c->validation->param('body');
-warn "DATA: " . Data::Dumper::Dumper( $body );
 
     my $item_message = Koha::Item::Message->new( $body );
     $item_message->itemnumber( $itemnumber );
@@ -155,6 +154,9 @@ sub update_item_message {
 }
 
 sub delete_item_message {
+    require Koha::Item::Message;
+    require Koha::Item::Messages;
+
     my $c = shift->openapi->valid_input or return;
 
     my $itemnumber      = $c->validation->param('item_id');
@@ -166,7 +168,7 @@ sub delete_item_message {
         $item_message = Koha::Item::Messages->search(
             { itemnumber => $itemnumber, item_message_id => $item_message_id } );
         $item_message->delete;
-        return $c->render( status => 200, openapi => {} );
+        return $c->render( status => 200, openapi => $item_message );
     }
     catch {
         if ( $_->isa('DBIx::Class::Exception') ) {
