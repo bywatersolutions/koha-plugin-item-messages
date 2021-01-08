@@ -202,11 +202,12 @@ class ItemMessageCreator extends React.Component {
                         className="input-xlarge"
                         value=${this.state.message}
                         onChange=${this.handleContentChange}
+                        style=${{width: "15em", margin: ".5em"}}
                 >
                     ${ av_options.map( (av) => html`<option key=${av} value=${av}>${av}</option>` ) }
                 </select>`;
         } else {
-            pulldown_or_text = html `<input style=${{margin: ".5em"}} className="input-xlarge" type="text" value=${this.state.message} onChange=${this.handleContentChange} />`;
+            pulldown_or_text = html `<input style=${{width: "15em", margin: ".5em"}} className="input-xlarge" type="text" value=${this.state.message} onChange=${this.handleContentChange} />`;
         }
 
         return html `<ul>
