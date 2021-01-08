@@ -19,7 +19,7 @@ $( document ).ready(function() {
 		authorised_values = avs;
 		for (var i = 0; i < authorised_values.length; i++) {
 			var av = authorised_values[i];
-			av_descriptions[av.authorised_value] = av.lib;
+			av_descriptions[av.authorised_value] = av;
 		}
 	  }
 	});
@@ -121,7 +121,7 @@ class ItemMessage extends React.Component {
     render = () => {
         return  html`<ul>
                     <span className="badge">
-                        ${av_descriptions[this.props.message.type]}
+                        ${av_descriptions[this.props.message.type].lib}
                     </span>
 
                     <span style=${{margin: ".5em"}}>${this.props.message.message}</span>
@@ -181,6 +181,7 @@ class ItemMessageCreator extends React.Component {
     }
 
     render = () => {
+        // build the 'type' pulldown options from the list authorised values
         var options = [];
         for (var i = 0; i < authorised_values.length; i++) {
             var av = authorised_values[i];
@@ -189,28 +190,39 @@ class ItemMessageCreator extends React.Component {
             );
         }
 
+        // opac_opac may have a list of pipe separated values
+        // if it does, we create a pulldown of those values
+        // instead of a free text field input
+        let selected_av = av_descriptions[this.state.type];
+        let lib_opac = selected_av.lib_opac;
+        let av_options = [];
+        if ( lib_opac ) av_options = lib_opac.split('|');
+
+        let pulldown_or_text;
+        if ( lib_opac ) {
+            pulldown_or_text = html`
+                <select style=${{margin: ".5em"}}
+                        className="input-xlarge"
+                        value=${this.state.message}
+                        onChange=${this.handleContentChange}
+                >
+                    ${ av_options.map( (av) => html`<option key=${av} value=${av}>${av}</option>` ) }
+                </select>`;
+        } else {
+            pulldown_or_text = html`<input style=${{margin: ".5em"}} className="input-xlarge" type="text" value=${this.state.message} onChange=${this.handleContentChange} />`;
+        }
+
         return  html`<ul>
                     <span className="label">
                         <select value=${this.state.type} onChange=${this.handleTypeChange}>
                             ${options}
                         </select>
                     </span>
-                    <input style=${{margin: ".5em"}} className="input-xlarge" type="text" value=${this.state.message} onChange=${this.handleContentChange} />
+                    ${pulldown_or_text}
                     <button className="submit" onClick=${this.addMessage}>
-                        <i className="fa fa-plus-circle"></i>
-                        ${ADD_MESSAGE}
+                        <i className="fa fa-plus-circle"></i> ${ADD_MESSAGE}
                     </button>
                     <a style=${{margin: ".5em"}} href="#!" onClick=${this.cancelMessage}>${CANCEL}</a>
                 </ul>`;
       }
 }
-
-
-const App = (props) => {
-    return html`<div>Hello World! foo: ${props.foo}</div>`;
-};
-
-ReactDOM.render(
-    html`<${App} foo=${"bar"} />`,
-    document.getElementById("placehold")
-);
