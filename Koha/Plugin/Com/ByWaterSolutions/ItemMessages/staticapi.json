@@ -1,5 +1,5 @@
 {
-"/static_files/mm.gif": {
+"/static_files/intranet.js": {
   "get": {
     "x-mojo-to": "Static#get",
     "tags": [

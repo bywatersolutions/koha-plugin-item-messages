@@ -243,5 +243,28 @@
         }
       }
     }
+  },
+  "/authorised_values": {
+    "get": {
+      "x-mojo-to": "Com::ByWaterSolutions::ItemMessages::ApiController#get_item_message_types",
+      "operationId": "getItemMessageTypes",
+      "tags": [
+        "items",
+        "item_messages"
+      ],
+      "produces": [
+        "application/json"
+      ],
+      "responses": {
+        "200": {
+          "description": "An item messge"
+        }
+      },
+      "x-koha-authorization": {
+        "permissions": {
+          "catalogue": "1"
+        }
+      }
+    }
   }
 }

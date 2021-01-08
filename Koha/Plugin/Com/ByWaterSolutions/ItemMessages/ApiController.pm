@@ -178,4 +178,12 @@ sub delete_item_message {
     };
 }
 
+sub get_item_message_types {
+    my $c = shift->openapi->valid_input or return;
+
+    my $authorised_values = Koha::AuthorisedValues->search({ category => 'ITEM_MESSAGE_TYPE' })->unblessed;
+
+    return $c->render( status => 200, openapi => $authorised_values );
+}
+
 1;
