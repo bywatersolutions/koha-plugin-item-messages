@@ -91,7 +91,7 @@ sub install() {
             `created_on` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             INDEX (  `itemnumber` ),
             CONSTRAINT `message_item_fk` FOREIGN KEY (itemnumber) REFERENCES items (itemnumber) ON DELETE CASCADE ON UPDATE CASCADE
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     });
 }
 
