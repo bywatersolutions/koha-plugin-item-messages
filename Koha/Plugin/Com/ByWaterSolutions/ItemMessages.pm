@@ -7,6 +7,7 @@ use base qw(Koha::Plugins::Base);
 use C4::Auth;
 use C4::Context;
 use Koha::AuthorisedValues;
+use Koha::DateUtils qw(dt_from_string);
 use Koha::Schema;
 
 use Module::Metadata;
