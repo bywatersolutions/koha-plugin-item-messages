@@ -40,7 +40,7 @@ $(document).ready(function() {
             });
 
             $(`
-				<div class="listgroup">
+				<div class="rows">
 					<div id="item-messages-${itemnumber}" class="item-messages"></div>
 				</div>
 			`).insertAfter(this);
@@ -114,15 +114,17 @@ class ItemMessage extends React.Component {
     }
 
     render = () => {
-        return html `<ul>
-                    <span className="badge">
-                        ${av_descriptions[this.props.message.type].lib}
+        return html `<li>
+                    <span className="label">
+                        <span className="badge">
+                            ${av_descriptions[this.props.message.type].lib}
+                        </span>
                     </span>
 
                     <span style=${{margin: ".5em"}}>${this.props.message.message}</span>
 
 				    <i className="fa fa-trash" onClick=${this.removeMessage}></i>
-                </ul>`;
+                </li>`;
     }
 }
 
@@ -210,7 +212,7 @@ class ItemMessageCreator extends React.Component {
             pulldown_or_text = html `<input style=${{width: "15em", margin: ".5em"}} className="input-xlarge" type="text" value=${this.state.message} onChange=${this.handleContentChange} />`;
         }
 
-        return html `<ul>
+        return html `<ol>
                     <span className="label">
                         <select value=${this.state.type} onChange=${this.handleTypeChange}>
                             ${options}
@@ -221,6 +223,6 @@ class ItemMessageCreator extends React.Component {
                         <i className="fa fa-plus-circle"></i> ${ADD_MESSAGE}
                     </button>
                     <a style=${{margin: ".5em"}} href="#!" onClick=${this.cancelMessage}>${CANCEL}</a>
-                </ul>`;
+                </ol>`;
     }
 }
