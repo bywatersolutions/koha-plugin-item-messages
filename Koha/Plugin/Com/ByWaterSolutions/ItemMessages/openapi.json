@@ -82,7 +82,7 @@
       "x-koha-authorization": {
         "allow-owner": true,
         "permissions": {
-          "editcatalogue": "*"
+          "editcatalogue": "edit_items"
         }
       }
     }
@@ -198,7 +198,7 @@
       },
       "x-koha-authorization": {
         "permissions": {
-          "editcatalogue": "*"
+          "editcatalogue": "edit_items"
         }
       }
     },
@@ -235,7 +235,7 @@
       },
       "x-koha-authorization": {
         "permissions": {
-          "editcatalogue": "*"
+          "editcatalogue": "edit_items"
         }
       }
     }
