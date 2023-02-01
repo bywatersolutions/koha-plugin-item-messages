@@ -11,3 +11,12 @@ The ITEM_MESSAGE_TYPE authorised value category will define the different types 
 If you would like to have a set up option for a given message type,
 instead of a free text field, you may add a list of pipe (|) delimeted
 options in the OPAC description for that authorised value.
+
+## Database Structure
+
+This plugin creates a new table `item_messages` containing the following columns:
+* `item_message_id` - iternal id for this message, auto increments
+* `itemnumber`- foreign key to the items table
+* `type` - ITEM_MESSAGE authorised value
+* `message` - the actualy value for this message
+* `created_on` - a timestamp for this message
