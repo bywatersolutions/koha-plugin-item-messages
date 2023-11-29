@@ -1,5 +1,5 @@
 # Item Messages plugin for Koha
-A plugin for Koha to add and edit messages related to a specific item.
+A plugin for Koha to add and edit messages related to a specific item. These messages or notes can be added to the item through the "more detail" tab. Notes/Messages can be a free text or alternatively can be connected to an authorized value, ITEM_MESSAGE_TYPE. The messages/notes that are added to the item will only be visible via the "more detail" item tab as well as through reports.
 
 ## Setup
 * Download and install the plugin
@@ -20,3 +20,5 @@ This plugin creates a new table `item_messages` containing the following columns
 * `type` - ITEM_MESSAGE authorised value
 * `message` - the actualy value for this message
 * `created_on` - a timestamp for this message
+
+* 
