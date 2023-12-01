@@ -23,4 +23,6 @@ This plugin creates a new table `item_messages` containing the following columns
 * `message` - the actualy value for this message
 * `created_on` - a timestamp for this message
 
+More information can be found here: https://bywatersolutions.com/education/option-to-add-more-fields-in-the-item-with-a-new-koha-plugin
+
   
