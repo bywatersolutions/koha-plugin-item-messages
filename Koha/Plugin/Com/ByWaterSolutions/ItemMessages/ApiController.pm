@@ -63,7 +63,7 @@ sub get_item_message {
     my $item_message_id = $c->validation->param('item_message_id');
 
     my $item_messages = C4::Context->dbh->selectall_arrayref("SELECT * FROM item_messages WHERE itemnumber = ?", { Slice => {} }, $itemnumber);
-    unless (@item_messages) {
+    unless (@$item_messages) {
         return $c->render(
             status => 400,
             openapi => { error => "Item not found" }
