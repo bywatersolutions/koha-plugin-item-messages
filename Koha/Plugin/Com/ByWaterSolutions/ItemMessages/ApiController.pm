@@ -25,9 +25,6 @@ use Koha::DateUtils;
 use Try::Tiny;
 
 sub list_item_messages {
-    require Koha::Item::Message;
-    require Koha::Item::Messages;
-
     my $c = shift->openapi->valid_input or return;
 
     my $itemnumber = $c->validation->param('item_id');
@@ -40,8 +37,8 @@ sub list_item_messages {
     }
 
     return try {
-        my $item_messages = Koha::Item::Messages->search({ itemnumber => $itemnumber });
-        return $c->render( status => 200, openapi => $item_messages );
+        my $item_messages = C4::Context->dbh->selectall_arrayref("SELECT * FROM item_messages WHERE itemnumber = ?", { Slice => {} }, $itemnumber);
+        return $c->render( status => 200, json => $item_messages );
     }
     catch {
         if ( $_->isa('DBIx::Class::Exception') ) {
@@ -60,15 +57,13 @@ sub list_item_messages {
 }
 
 sub get_item_message {
-    require Koha::Item::Message;
-    require Koha::Item::Messages;
-
     my $c = shift->openapi->valid_input or return;
 
     my $itemnumber = $c->validation->param('item_id');
     my $item_message_id = $c->validation->param('item_message_id');
 
-    if ( !Koha::Items->search( { itemnumber => $itemnumber } )->count > 0 ) {
+    my $item_messages = C4::Context->dbh->selectall_arrayref("SELECT * FROM item_messages WHERE itemnumber = ?", { Slice => {} }, $itemnumber);
+    unless (@item_messages) {
         return $c->render(
             status => 400,
             openapi => { error => "Item not found" }
@@ -76,12 +71,11 @@ sub get_item_message {
     }
 
     return try {
-        my $item_message
-            = Koha::Item::Messages->search(
-            { itemnumber => $itemnumber, item_message_id => $item_message_id } )
-            ->next;
+
+    my $item_messages = C4::Context->dbh->selectall_arrayref("SELECT * FROM item_messages WHERE itemnumber = ?", { Slice => {} }, $itemnumber);
+        my $item_message = C4::Context->dbh->selectrow_hashref("SELECT * FROM item_messages WHERE itemnumber = ? AND item_message_id = ?", undef, $itemnumber, $item_message_id );
         if ($item_message) {
-            return $c->render( status => 200, openapi => $item_message );
+            return $c->render( status => 200, json => $item_message );
         }
         else {
             return $c->render( status => 400, openapi => { error => 'Item message not found' } );
@@ -98,21 +92,18 @@ sub get_item_message {
 }
 
 sub add_item_message {
-    require Koha::Item::Message;
-    require Koha::Item::Messages;
-
     my $c = shift->openapi->valid_input or return;
 
     my $itemnumber = $c->validation->param('item_id');
     my $body       = $c->validation->param('body');
 
-    my $item_message = Koha::Item::Message->new( $body );
-    $item_message->itemnumber( $itemnumber );
+    my $dbh = C4::Context->dbh;
 
     return try {
-        $item_message->store();
-        $item_message = Koha::Item::Messages->find( $item_message->id );
-        return $c->render( status => 200, openapi => $item_message );
+        my $item_message_id = $dbh->{'mysql_insertid'};
+        my $item_message = C4::Context->dbh->selectrow_hashref("SELECT * FROM item_messages WHERE itemnumber = ? AND item_message_id = ?", undef, $itemnumber, $item_message_id );
+        
+        return $c->render( status => 200, json => $item_message );
     }
     catch {
         if ( $_->isa('DBIx::Class::Exception') ) {
@@ -131,32 +122,20 @@ sub update_item_message {
     my $item_message_id = $c->validation->param('item_message_id');
     my $body            = $c->validation->param('body');
 
-    my $item_message;
+    my $dbh = C4::Context->dbh;
 
     return try {
-        $item_message
-            = Koha::Item::Messages->search(
-            { itemnumber => $itemnumber, item_message_id => $item_message_id } )
-            ->next;
-        $item_message->set( $body );
-        $item_message->store();
-        return $c->render( status => 200, openapi => $item_message );
+        $dbh->do("UPDATE item_messages SET type = ?, message = ? WHERE itemnumber = ? AND item_message_id = ?", undef, $body->{type}, $body->{message}, $itemnumber, $item_message_id );
+        my $item_message = C4::Context->dbh->selectrow_hashref("SELECT * FROM item_messages WHERE itemnumber = ? AND item_message_id = ?", undef, $itemnumber, $item_message_id );
+        return $c->render( status => 200, json => $item_message );
     }
     catch {
-        if ( $_->isa('DBIx::Class::Exception') ) {
-            return $c->render( status => 500, openapi => { error => $_->{msg} } );
-        }
-        else {
-            return $c->render( status => 500, openapi => { error => "Something went wrong, check the logs." } );
-        }
+        return $c->render( status => 500, openapi => { error => "Something went wrong, check the logs." } );
     };
 
 }
 
 sub delete_item_message {
-    require Koha::Item::Message;
-    require Koha::Item::Messages;
-
     my $c = shift->openapi->valid_input or return;
 
     my $itemnumber      = $c->validation->param('item_id');
@@ -165,9 +144,8 @@ sub delete_item_message {
     my $item_message;
 
     return try {
-        $item_message = Koha::Item::Messages->search(
-            { itemnumber => $itemnumber, item_message_id => $item_message_id } );
-        $item_message->delete;
+        my $item_message = C4::Context->dbh->selectrow_hashref("SELECT * FROM item_messages WHERE itemnumber = ? AND item_message_id = ?", undef, $itemnumber, $item_message_id );
+        $dbh->do("DELETE FROM item_messages WHERE itemnumber = ? AND item_message_id = ?", undef, $itemnumber, $item_message_id );
         return $c->render( status => 200, openapi => $item_message );
     }
     catch {
