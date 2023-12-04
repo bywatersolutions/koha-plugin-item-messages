@@ -143,8 +143,10 @@ sub delete_item_message {
 
     my $item_message;
 
+    my $dbh = C4::Context->dbh;
+
     return try {
-        my $item_message = C4::Context->dbh->selectrow_hashref("SELECT * FROM item_messages WHERE itemnumber = ? AND item_message_id = ?", undef, $itemnumber, $item_message_id );
+        my $item_message = $dbh->selectrow_hashref("SELECT * FROM item_messages WHERE itemnumber = ? AND item_message_id = ?", undef, $itemnumber, $item_message_id );
         $dbh->do("DELETE FROM item_messages WHERE itemnumber = ? AND item_message_id = ?", undef, $itemnumber, $item_message_id );
         return $c->render( status => 200, openapi => $item_message );
     }
