@@ -11,48 +11,48 @@ var ARE_YOU_SURE = _("Are you sure you want to delete the following message: ");
 var authorised_values;
 var av_descriptions = [];
 $(document).ready(function() {
-  if (window.location.href.indexOf("catalogue/moredetail.pl") > -1) {
-    const promise1 = $.ajax({
-        dataType: "json",
-        url: "/api/v1/contrib/item_messages/authorised_values",
-        success: function(avs) {
-            authorised_values = avs;
-            for (var i = 0; i < authorised_values.length; i++) {
-                var av = authorised_values[i];
-                av_descriptions[av.authorised_value] = av;
-            }
-        }
-    });
-
-    Promise.all([promise1]).then(() => {
-        $("#catalogue_detail_biblio h3[id^=item]").each(function() {
-            const parts = this.id.split('item');
-            const itemnumber = parts[1];
-
-            let messages;
-            $.ajax({
-                dataType: "json",
-                url: `/api/v1/contrib/item_messages/items/${itemnumber}/messages`,
-                async: false,
-                success: function(m) {
-                    messages = m;
+    if (window.location.href.indexOf("catalogue/moredetail.pl") > -1) {
+        const promise1 = $.ajax({
+            dataType: "json",
+            url: "/api/v1/contrib/item_messages/authorised_values",
+            success: function(avs) {
+                authorised_values = avs;
+                for (var i = 0; i < authorised_values.length; i++) {
+                    var av = authorised_values[i];
+                    av_descriptions[av.authorised_value] = av;
                 }
-            });
+            }
+        });
 
-            $(`
+        Promise.all([promise1]).then(() => {
+            $("#catalogue_detail_biblio h3[id^=item]").each(function() {
+                const parts = this.id.split('item');
+                const itemnumber = parts[1];
+
+                let messages;
+                $.ajax({
+                    dataType: "json",
+                    url: `/api/v1/contrib/item_messages/items/${itemnumber}/messages`,
+                    async: false,
+                    success: function(m) {
+                        messages = m;
+                    }
+                });
+
+                $(`
 				<div class="rows">
 					<div id="item-messages-${itemnumber}" class="item-messages"></div>
 				</div>
 			`).insertAfter(this);
 
-            ReactDOM.render(
-                html `<${ItemMessages} itemnumber=${itemnumber} messages=${messages} />`,
-                document.getElementById(`item-messages-${itemnumber}`)
-            );
+                ReactDOM.render(
+                    html `<${ItemMessages} itemnumber=${itemnumber} messages=${messages} />`,
+                    document.getElementById(`item-messages-${itemnumber}`)
+                );
 
+            });
         });
-    });
-  }
+    }
 });
 
 class ItemMessages extends React.Component {
