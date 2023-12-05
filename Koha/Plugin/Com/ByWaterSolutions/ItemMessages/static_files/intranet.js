@@ -11,7 +11,7 @@ var ARE_YOU_SURE = _("Are you sure you want to delete the following message: ");
 var authorised_values;
 var av_descriptions = [];
 $(document).ready(function() {
-
+  if (window.location.href.indexOf("catalogue/moredetail.pl") > -1) {
     const promise1 = $.ajax({
         dataType: "json",
         url: "/api/v1/contrib/item_messages/authorised_values",
@@ -52,6 +52,7 @@ $(document).ready(function() {
 
         });
     });
+  }
 });
 
 class ItemMessages extends React.Component {
