@@ -43,7 +43,7 @@ $(document).ready(function() {
 				<div class="rows">
 					<div id="item-messages-${itemnumber}" class="item-messages"></div>
 				</div>
-			`).insertAfter(this);
+			`).insertAfter( $(this).siblings('.rows') );
 
                 ReactDOM.render(
                     html `<${ItemMessages} itemnumber=${itemnumber} messages=${messages} />`,
@@ -117,14 +117,14 @@ class ItemMessage extends React.Component {
     render = () => {
         return html `<li>
                     <span className="label">
-                        <span className="badge">
+                        <span className="badge text-bg-success">
                             ${av_descriptions[this.props.message.type].lib}
                         </span>
                     </span>
 
                     <span style=${{margin: ".5em"}}>${this.props.message.message}</span>
 
-				    <i className="fa fa-trash" onClick=${this.removeMessage}></i>
+				    <button href="#" onClick=${this.removeMessage}><i className="fa fa-trash"></i></button>
                 </li>`;
     }
 }
@@ -201,29 +201,26 @@ class ItemMessageCreator extends React.Component {
         let pulldown_or_text;
         if (lib_opac) {
             pulldown_or_text = html `
-                <select style=${{margin: ".5em"}}
+                <span style=${{margin: ".5em"}}
                         className="input-xlarge"
                         value=${this.state.message}
                         onChange=${this.handleContentChange}
                         style=${{width: "15em", margin: ".5em"}}
                 >
-                    ${ av_options.map( (av) => html`<option key=${av} value=${av}>${av}</option>` ) }
-                </select>`;
+                    ${ av_options.map( (av) => html`<span key=${av}>${av}</span>` ) }
+                </span>`;
         } else {
             pulldown_or_text = html `<input style=${{width: "15em", margin: ".5em"}} className="input-xlarge" type="text" value=${this.state.message} onChange=${this.handleContentChange} />`;
         }
 
-        return html `<ol>
-                    <span className="label">
-                        <select value=${this.state.type} onChange=${this.handleTypeChange}>
-                            ${options}
-                        </select>
-                    </span>
+        return html `<li>
+                    <select value=${this.state.type} onChange=${this.handleTypeChange}>
+                        ${options}
+                    </select>
                     ${pulldown_or_text}
-                    <button className="submit" onClick=${this.addMessage}>
+                    <button className="btn btn-primary btn-xs" onClick=${this.addMessage}>
                         <i className="fa fa-plus-circle"></i> ${ADD_MESSAGE}
                     </button>
-                    <a style=${{margin: ".5em"}} href="#!" onClick=${this.cancelMessage}>${CANCEL}</a>
-                </ol>`;
+                </li>`;
     }
 }
