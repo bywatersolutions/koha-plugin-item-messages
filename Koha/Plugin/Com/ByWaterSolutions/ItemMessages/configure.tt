@@ -1,0 +1,59 @@
+[% USE raw %]
+[% USE HtmlTags %]
+[% USE Koha %]
+[% USE Asset %]
+[% USE KohaDates %]
+[% PROCESS 'i18n.inc' %]
+[% SET footerjs = 1 %]
+[% INCLUDE 'doc-head-open.inc' %]
+<title>[% FILTER collapse %]
+    [% t("Item Messages Configuration") | html %] &rsaquo;
+    [% t("Koha") | html %]
+[% END %]</title>
+[% INCLUDE 'doc-head-close.inc' %]
+</head>
+<body id="plugins_item_message" class="plugins">
+[% INCLUDE 'header.inc' %]
+[% PROCESS 'about-team.inc' %]
+
+[% WRAPPER 'sub-header.inc' %]
+    [% WRAPPER breadcrumbs %]
+        [% IF blocking_error %]
+            [% WRAPPER breadcrumb_item bc_active= 1 %]
+                <span>Plugins</span>
+            [% END %]
+        [% ELSE %]
+            [% WRAPPER breadcrumb_item %]
+                <a href="/cgi-bin/koha/plugins/plugins-home.pl">Plugins</a>
+            [% END %]
+            [% WRAPPER breadcrumb_item bc_active= 1 %]
+                <span>Item messages configuration</span>
+            [% END %]
+        [% END %]
+    [% END #/ WRAPPER breadcrumbs %]
+[% END #/ WRAPPER sub-header.inc %]
+
+<div id="doc3" class="main container-fluid">
+    <!-- We can access our own plugins resource files using the PLUGIN_PATH variable. -->
+    <h1>Item message plugin configuration</h1>
+
+    <div class="page-section clearfix">
+        <form method="get">
+            <!-- Always pass these two parameters so the plugin system knows what to execute! -->
+            <input type="hidden" name="class" value="[% CLASS %]"/>
+            <input type="hidden" name="method" value="[% METHOD %]"/>
+
+            <input type="checkbox" id="auto_delete_lost" name="auto_delete_lost" [% IF auto_delete_lost %] checked="checked" [% END %]>
+            <label for="auto_delete_lost">Automatically delete item messages on LOST items that are found.</label>
+
+            <input type="hidden" name="save" value="1" />
+            <div class="action">
+                <button class="btn btn-primary" type="submit">Save configuration</button>
+                <a href="/cgi-bin/koha/plugins/plugins-home.pl" class="cancel">Cancel</a>
+            </div>
+        </form>
+    </div>
+
+    <hr/>
+</div>
+[% INCLUDE 'intranet-bottom.inc' %]

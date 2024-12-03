@@ -98,6 +98,30 @@ sub uninstall() {
     return C4::Context->dbh->do("DROP TABLE IF EXISTS item_messages");
 }
 
+sub configure {
+    my ( $self, $args ) = @_;
+    my $cgi = $self->{'cgi'};
+
+    unless ( $cgi->param('save') ) {
+        my $template = $self->get_template({ file => 'configure.tt' });
+
+        ## Grab the values we already have for our settings, if any exist
+        $template->param(
+            auto_delete_lost => $self->retrieve_data('auto_delete_lost'),
+        );
+
+        $self->output_html( $template->output() );
+    }
+    else {
+        $self->store_data(
+            {
+                auto_delete_lost => $cgi->param('auto_delete_lost'),
+            }
+        );
+        $self->go_home();
+    }
+}
+
 ## API methods
 # If your plugin implements API routes, then the 'api_routes' method needs
 # to be implemented, returning valid OpenAPI 2.0 paths serialized as a hashref.
@@ -127,6 +151,29 @@ sub static_routes {
     my $spec     = decode_json($spec_str);
 
     return $spec;
+}
+
+sub after_item_action {
+     my ($self, $params) = @_;
+
+     my $auto_delete_lost = $self->retrieve_data('auto_delete_lost');
+     return unless $auto_delete_lost eq 'on';
+
+     my $action = $params->{action};
+     my $item = $params->{item};
+     my $dbh = C4::Context->dbh;
+     #continue only if the action is modify and the lost status is 0
+     if ( $action eq 'modify' && $item->itemlost == 0 ) {
+        my $itemnumber = $params->{item_id};
+
+        my $sth = $dbh->prepare(q{
+            DELETE FROM item_messages
+            WHERE
+                itemnumber = ?
+        });
+        $sth->execute($itemnumber);
+     };
+
 }
 
 1;
