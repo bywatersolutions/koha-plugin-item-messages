@@ -9,6 +9,7 @@ use C4::Context;
 use Koha::AuthorisedValues;
 use Koha::DateUtils qw(dt_from_string);
 use Koha::Schema;
+use C4::Circulation qw( barcodedecode );
 
 use Module::Metadata;
 use Mojo::JSON qw(decode_json to_json);
@@ -120,6 +121,77 @@ sub configure {
         );
         $self->go_home();
     }
+}
+
+sub tool {
+    my ( $self, $args ) = @_;
+
+    my $cgi = $self->{'cgi'};
+    
+    if ( $cgi->param('submitted') ) {
+        $self->tool_step2();
+    } else {
+        $self->tool_step1();
+    }
+
+}
+
+sub tool_step1 {
+    my ( $self, $args ) = @_;
+    my $cgi = $self->{'cgi'};
+
+    my $template = $self->get_template({ file => 'tool-step1.tt' });
+    
+    warn "TOOL STEP 1 here";
+
+    $self->output_html( $template->output() );
+}
+
+sub tool_step2 {
+    my ( $self, $args ) = @_;
+    my $cgi = $self->{'cgi'};
+
+    my $template = $self->get_template({ file => 'tool-step2.tt' });
+    
+    warn "TOOL STEP 2 here";
+
+    my $uploadbarcodes = $cgi->upload('uploadbarcodes');
+    my @barcodes;
+    my @uploadedbarcodes;
+
+    if ( $uploadbarcodes && length($uploadbarcodes) > 0 ) {
+        binmode($uploadbarcodes, ":encoding(UTF-8)");
+        my $split_chars = C4::Context->preference('BarcodeSeparators');
+        while (my $barcode=<$uploadbarcodes>) {
+            chomp $barcode;
+            push @uploadedbarcodes, grep { /\S/ } split( /[$split_chars]/, $barcode );
+        }
+    } else {
+        warn 'NO UPLOADED BARCODES';
+    }
+
+    for my $barcode (@uploadedbarcodes) {
+        next unless $barcode;
+
+        $barcode = barcodedecode($barcode);
+
+        push @barcodes,$barcode;
+    }
+
+    my @items = Koha::Items->search(
+        { barcode => { -in => \@barcodes } },
+        {
+            join     => 'biblio',
+            prefetch => 'biblio',
+        }
+    )->as_list;
+
+
+    $template->param(
+        scanned_items => \@items,
+    );   
+
+    $self->output_html( $template->output() );
 }
 
 ## API methods
