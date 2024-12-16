@@ -35,10 +35,28 @@
 [% END #/ WRAPPER sub-header.inc %]
 
 <div id="doc3">
-    [% FOREACH item IN scanned_items %]
-        [% item.itemnumber %]
-        [% item.biblio.title %]
-    [% END %]
+    <table>
+        <thead>
+            <tr>
+                <th></th>
+                <th>Title</th>
+                <th>Barcode</th>
+                <th>Item message</th>
+                <th>Item message type</th>
+            </tr>
+        </thead>
+        <tbody>
+        [% FOREACH item IN scanned_items %]
+            <tr>
+                <td><input type="checkbox" value="[% item.itemnumber | html %]"></td>
+                <td>[% item.title | html %]</td>
+                <td>[% item.barcode | html %]</td>
+                <td>[% item.message | html %]</td>
+                <td>[% item.type | html %]</td>
+            </tr>
+        [% END %]
+        </tbody>
+    </table>
 </div>
     <br/>
 

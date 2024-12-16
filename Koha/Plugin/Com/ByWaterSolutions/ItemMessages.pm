@@ -178,7 +178,7 @@ sub tool_step2 {
         push @barcodes,$barcode;
     }
 
-    my @items = Koha::Items->search(
+    my @items_rs = Koha::Items->search(
         { barcode => { -in => \@barcodes } },
         {
             join     => 'biblio',
@@ -186,9 +186,45 @@ sub tool_step2 {
         }
     )->as_list;
 
+    my %items_data;  # Hash to store item and biblio information
+
+    foreach my $item (@items_rs) {
+        my $biblio = $item->biblio;  # Access the prefetched biblio relation
+        $items_data{$item->itemnumber} = {
+            itemnumber  => $item->itemnumber,
+            barcode  => $item->barcode,
+            title    => $biblio->title,
+            message  => '',   # Placeholder for item_messages.message
+            type     => '',   # Placeholder for item_messages.type
+        };
+    }
+
+    if (%items_data) {
+        my @itemnumbers = keys %items_data;
+        my $dbh = C4::Context->dbh;
+        my $placeholders = join(',', ('?') x @itemnumbers);
+        my $query = qq{
+            SELECT itemnumber, message, type
+            FROM item_messages
+            WHERE itemnumber IN ($placeholders)
+        };
+
+        my $sth = $dbh->prepare($query);
+        $sth->execute(@itemnumbers);
+
+        while (my $row = $sth->fetchrow_hashref) {
+            my $itemnumber = $row->{itemnumber};
+            if (exists $items_data{$itemnumber}) {
+                $items_data{$itemnumber}->{message} = $row->{message};
+                $items_data{$itemnumber}->{type}    = $row->{type};
+            }
+        }
+    }
+
+    my @scanned_items = values %items_data;
 
     $template->param(
-        scanned_items => \@items,
+        scanned_items => \@scanned_items,
     );   
 
     $self->output_html( $template->output() );
