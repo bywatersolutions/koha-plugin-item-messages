@@ -127,8 +127,10 @@ sub tool {
     my ( $self, $args ) = @_;
 
     my $cgi = $self->{'cgi'};
-    
-    if ( $cgi->param('submitted') ) {
+    if ( $cgi->param('submitted2') || $cgi->param('submitted3') ) {
+        $self->tool_step3();
+    }
+    elsif ( $cgi->param('submitted') ) {
         $self->tool_step2();
     } else {
         $self->tool_step1();
@@ -142,8 +144,6 @@ sub tool_step1 {
 
     my $template = $self->get_template({ file => 'tool-step1.tt' });
     
-    warn "TOOL STEP 1 here";
-
     $self->output_html( $template->output() );
 }
 
@@ -153,8 +153,6 @@ sub tool_step2 {
 
     my $template = $self->get_template({ file => 'tool-step2.tt' });
     
-    warn "TOOL STEP 2 here";
-
     my $uploadbarcodes = $cgi->upload('uploadbarcodes');
     my @barcodes;
     my @uploadedbarcodes;
@@ -226,6 +224,73 @@ sub tool_step2 {
     $template->param(
         scanned_items => \@scanned_items,
     );   
+
+    $self->output_html( $template->output() );
+}
+
+sub tool_step3 {
+    my ( $self, $args ) = @_;
+    my $cgi = $self->{'cgi'};
+
+    my $template = $self->get_template({ file => 'tool-step3.tt' });
+    
+    my @itemnumbers = $cgi->param('itemnumber');
+    my $dbh = C4::Context->dbh;
+    if ( $cgi->param('submitted2') ) {
+        my $new_message = $cgi->param('new_message');
+
+        unless (@itemnumbers) {
+            warn "No itemnumbers provided!";
+            return;
+        }
+
+        my $query = qq{
+            UPDATE item_messages
+            SET message = ?
+            WHERE itemnumber = ?
+        };
+
+        my $sth = $dbh->prepare($query);
+
+        foreach my $itemnumber (@itemnumbers) {
+            next unless $itemnumber;
+
+            eval {
+                $sth->execute($new_message, $itemnumber);
+            };
+            if ($@) {
+                warn "Failed to update message for itemnumber $itemnumber: $@";
+            } else {
+                warn "Successfully updated message for itemnumber $itemnumber";
+            }
+        }
+        $sth->finish;
+
+    } elsif ( $cgi->param('submitted3') )  {
+        unless (@itemnumbers) {
+            warn "No itemnumbers provided!";
+            return;
+        }
+        my $query = qq{
+            DELETE FROM  item_messages
+            WHERE itemnumber = ?
+        };
+
+        my $sth = $dbh->prepare($query);
+        foreach my $itemnumber (@itemnumbers) {
+            next unless $itemnumber;
+
+            eval {
+                $sth->execute($itemnumber);
+            };
+            if ($@) {
+                warn "Failed to update message for itemnumber $itemnumber: $@";
+            } else {
+                warn "Successfully updated message for itemnumber $itemnumber";
+            }
+        }
+        $sth->finish;
+    }
 
     $self->output_html( $template->output() );
 }

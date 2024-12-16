@@ -201,14 +201,14 @@ class ItemMessageCreator extends React.Component {
         let pulldown_or_text;
         if (lib_opac) {
             pulldown_or_text = html `
-                <span style=${{margin: ".5em"}}
+                <select style=${{margin: ".5em"}}
                         className="input-xlarge"
                         value=${this.state.message}
                         onChange=${this.handleContentChange}
                         style=${{width: "15em", margin: ".5em"}}
                 >
-                    ${ av_options.map( (av) => html`<span key=${av}>${av}</span>` ) }
-                </span>`;
+                    ${ av_options.map( (av) => html`<option key=${av} value=${av}>${av}</option>` ) }
+                </select>`;
         } else {
             pulldown_or_text = html `<input style=${{width: "15em", margin: ".5em"}} className="input-xlarge" type="text" value=${this.state.message} onChange=${this.handleContentChange} />`;
         }
