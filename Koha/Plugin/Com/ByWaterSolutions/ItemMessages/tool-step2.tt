@@ -38,77 +38,89 @@
 <div id="doc3">
     <h1>Update item messages</h1>
     <div class="page-section">
-        <form id="update_messages" method="post">
-            [% INCLUDE 'csrf-token.inc' %]
-            <input type="hidden" name="class" value="[% CLASS %]"/>
-            <input type="hidden" name="method" value="[% METHOD %]"/>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Title</th>
-                        <th>Barcode</th>
-                        <th>Item message</th>
-                        <th>Item message type</th>
-                    </tr>
-                </thead>
-                <tbody>
-                [% FOREACH item IN scanned_items %]
-                    [% IF item.messages.size > 0 %]
-                        [% FOREACH message IN item.messages %]
-                            <tr>
-                                <td>[% item.title | html %]</td>
-                                <td>[% item.barcode | html %]</td>
-                                <td>[% message.message | html %]</td>
-                                <td><span class="badge text-bg-success">[% message.type | html %]</span></td>
-                            </tr>
-                        [% END %]
-                    [% ELSE %]
-                            <tr>
-                                <td>[% item.title | html %]</td>
-                                <td>[% item.barcode | html %]</td>
-                                <td></td>
-                                <td></td>
-                            </tr>
+        [% INCLUDE 'csrf-token.inc' %]
+        <table>
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Barcode</th>
+                    <th>Item message</th>
+                    <th>Item message type</th>
+                </tr>
+            </thead>
+            <tbody>
+            [% FOREACH item IN scanned_items %]
+                [% IF item.messages.size > 0 %]
+                    [% FOREACH message IN item.messages %]
+                        <tr>
+                            <td>[% item.title | html %]</td>
+                            <td>[% item.barcode | html %]</td>
+                            <td>[% message.message | html %]</td>
+                            <td><span class="badge text-bg-success">[% message.type | html %]</span></td>
+                        </tr>
                     [% END %]
+                [% ELSE %]
+                        <tr>
+                            <td>[% item.title | html %]</td>
+                            <td>[% item.barcode | html %]</td>
+                            <td></td>
+                            <td></td>
+                        </tr>
                 [% END %]
-                </tbody>
-            </table>
-                [% FOREACH av IN AuthorisedValues.Get('ITEM_MESSAGE_TYPE' ) %]
-                    [% SET type_options = av.lib_opac.split('\|') %]
-                    <form id="update_messages" method="post">
-                        [% INCLUDE 'csrf-token.inc' %]
-                        <input type="hidden" name="class" value="[% CLASS %]"/>
-                        <input type="hidden" name="method" value="[% METHOD %]"/>
-                        [% FOREACH item IN scanned_items %]
-                            [% FOREACH message IN item.messages %]
-                                <input name="itemnumber" type="hidden" value="[% message.item_message_id | html %]">
+            [% END %]
+            </tbody>
+        </table>
+    </div>
+    <div class="page-section">
+        <h3>Bulk update item messages by type:</h3>
+        <ul class="nav nav-tabs" role="tablist">
+            [% FOREACH av IN AuthorisedValues.Get('ITEM_MESSAGE_TYPE' ) %]
+                <li class="nav-item" role="presentation">
+                    <a id="[% av.authorised_value | html %]-tab" class="nav-link[% IF loop.count == 1 %] active[% END %]" href="#[% av.authorised_value | html %]_panel" data-bs-toggle="tab" dat-bs-target="#[av.authorised_value | html]" role="tab" data-toggle="tab">[% av.authorised_value | html %]</a>
+                </li>    
+            [% END %]
+        </ul>
+        <div class="tab-content">
+            [% FOREACH av IN AuthorisedValues.Get('ITEM_MESSAGE_TYPE' ) %]
+                [% SET type_options = av.lib_opac.split('\|') %]
+                    <div id="[% av.authorised_value | html %]_panel" class="tab-pane[% IF loop.count == 1 %] active[% END %]" role="tabpanel">
+                        <form id="update_messages" method="post">
+                            [% INCLUDE 'csrf-token.inc' %]
+                            <input type="hidden" name="class" value="[% CLASS %]"/>
+                            <input type="hidden" name="method" value="[% METHOD %]"/>
+                            [% FOREACH item IN scanned_items %]
+                                [% FOREACH message IN item.messages %]
+                                    <input name="itemnumber" type="hidden" value="[% message.item_message_id | html %]">
+                                [% END %]
                             [% END %]
-                        [% END %]
-                        <h3>Actions for the item message type: [% av.authorised_value | html %]</h3>
-                        <fieldset class="action">
-                            <label for="new_message_[% av.authorised_value | html %]">Update ALL item messages of the type [% av.authorised_value | html %] to:</label>
-                            [% IF type_options.size > 1 %]
-                                <select id="new_message_[% av.authorised_value | html %]" name="new_message">
-                                    [% FOREACH option_type IN type_options %]
-                                        <option value="[% option_type %]">[% option_type %]</optoin>
-                                    [% END %]
+                            <h3>Actions for the item message type: [% av.authorised_value | html %]</h3>
+                            <fieldset class="action">
+                                <label for="new_message_[% av.authorised_value | html %]">Update ALL item messages of the type [% av.authorised_value | html %] to:</label>
+                                [% IF type_options.size > 1 %]
+                                    <select id="new_message_[% av.authorised_value | html %]" name="new_message">
+                                        [% FOREACH option_type IN type_options %]
+                                            <option value="[% option_type %]">[% option_type %]</optoin>
+                                        [% END %]
+                                    </select>
+                                [% ELSE %]
+                                <input id="new_message_[% av.authorised_value | html %]" name="new_message" type="text" />
+                                [% END %]
+                                 <input type="hidden" name="type" value="[% av.authorised_value | html %]">
+                                <button type="submit" name="submitted2" value="update_type" class="btn btn-primary">Submit</button>
+                            </fieldset>
+                            <fieldset class="action">
+                                <label for="delete_message">Delete selected item messages</label>
+                                <select id="select_delete" name="select_delete">
+                                    <option value="0">No, don't delete.</option>
+                                    <option value="1">Yes, delete.</option>
                                 </select>
-                            [% ELSE %]
-                            <input id="new_message_[% av.authorised_value | html %]" name="new_message_[% av.authorised_value | html %]" type="text" />
-                            [% END %]
-                             <input type="hidden" name="type" value="[% av.authorised_value | html %]">
-                            <button type="submit" name="submitted2" value="update_type" class="btn btn-primary">Submit</button>
-                        </fieldset>
-                        <fieldset class="action">
-                            <label for="delete_message">Delete selected item messages</label>
-                            <select id="select_delete" name="select_delete">
-                                <option value="0">No, don't delete.</option>
-                                <option value="1">Yes, delete.</option>
-                            </select>
-                            <input type="submit" name="submitted3" class="btn btn-primary" value="Submit">
-                        </fieldset>
-                    </form>
-                [% END %]
+                                <input type="submit" name="submitted3" class="btn btn-primary" value="Submit">
+                            </fieldset>
+                        </form>
+                    </div>
+            [% END %]
+        </div>
+    </div>
     </div>
 </div>
 <br/>

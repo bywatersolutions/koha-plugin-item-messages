@@ -241,6 +241,8 @@ sub tool_step3 {
     my $action = $cgi->param('submitted2');
     my $type = $cgi->param('type');
     my $dbh = C4::Context->dbh;
+    my @updated_items;
+
     if ( $cgi->param('submitted2') ) {
         my $new_message = $cgi->param('new_message');
 
@@ -249,53 +251,94 @@ sub tool_step3 {
             return;
         }
 
+        my $placeholders = join(',', ('?') x scalar(@itemnumbers));
         my $query = qq{
             UPDATE item_messages
             SET message = ?
             WHERE type = ?
+                AND item_message_id IN ( $placeholders )
         };
 
         my $sth = $dbh->prepare($query);
+        $sth->execute($new_message, $type, @itemnumbers);
+        
+        my $select_query = qq{
+            SELECT im.item_message_id, im.itemnumber, im.message AS message, im.type,
+                   i.barcode, b.title
+            FROM item_messages im
+            JOIN items i ON im.itemnumber = i.itemnumber
+            LEFT JOIN biblio b ON i.biblionumber = b.biblionumber
+            WHERE im.type = ?
+              AND im.item_message_id IN ($placeholders)
+        };
 
-        foreach my $itemnumber (@itemnumbers) {
-            next unless $itemnumber;
+        my $select_sth = $dbh->prepare($select_query);
+        $select_sth->execute($type, @itemnumbers);
 
-            eval {
-                $sth->execute($new_message, $type);
+        while (my $row = $select_sth->fetchrow_hashref) {
+            next unless $row;
+            push @updated_items, {
+                item_message_id => $row->{item_message_id},
+                itemnumber      => $row->{itemnumber},
+                barcode         => $row->{barcode},
+                title           => $row->{title},
+                message         => $row->{message},
+                type            => $row->{type},
             };
-            if ($@) {
-                warn "Failed to update message for itemnumber $itemnumber: $@";
-            } else {
-                warn "Successfully updated message for itemnumber $itemnumber";
-            }
         }
-        $sth->finish;
+
+        $select_sth->finish;
 
     } elsif ( $cgi->param('submitted3') )  {
         unless (@itemnumbers) {
             warn "No itemnumbers provided!";
             return;
         }
+
+        my $placeholders = join(',', ('?') x scalar(@itemnumbers));
+
+    my $select_query = qq{
+        SELECT im.item_message_id, im.itemnumber, im.message AS old_message, im.type,
+               i.barcode, b.title
+        FROM item_messages im
+        JOIN items i ON im.itemnumber = i.itemnumber
+        LEFT JOIN biblio b ON i.biblionumber = b.biblionumber
+        WHERE im.type = ?
+          AND im.item_message_id IN ($placeholders)
+    };
+    my $select_sth = $dbh->prepare($select_query);
+    $select_sth->execute($type, @itemnumbers);
+
+    while (my $row = $select_sth->fetchrow_hashref) {
+        next unless $row;
+
+        push @updated_items, {
+            item_message_id => $row->{item_message_id},
+            itemnumber      => $row->{itemnumber},
+            barcode         => $row->{barcode},
+            title           => $row->{title},
+            message         => $row->{message},
+            type            => $row->{type},
+        };
+    }
+    $select_sth->finish;
+
         my $query = qq{
             DELETE FROM  item_messages
             WHERE type = ?
+                AND item_message_id IN ( $placeholders )
         };
 
         my $sth = $dbh->prepare($query);
-        foreach my $itemnumber (@itemnumbers) {
-            next unless $itemnumber;
-
-            eval {
-                $sth->execute($type);
-            };
-            if ($@) {
-                warn "Failed to update message for itemnumber $itemnumber: $@";
-            } else {
-                warn "Successfully updated message for itemnumber $itemnumber";
-            }
-        }
-        $sth->finish;
+        $sth->execute($type, @itemnumbers);
     }
+
+    my $count = scalar @updated_items;
+    $template->param(
+        action        => $action,
+        updated_count => $count,
+        updated_items => \@updated_items,
+    );
 
     $self->output_html( $template->output() );
 }

@@ -34,8 +34,36 @@
     [% END #/ WRAPPER breadcrumbs %]
 [% END #/ WRAPPER sub-header.inc %]
 
-<div id="doc3">
-    STEP 3
+<div id="doc3" class="page-section">
+    [% IF action == 'update_type' %]
+        <h3>[% updated_count %] item messages were successfully updated!</h3>
+    [% ELSE %]
+        <h3>[% updated_count %] item messages were successfully deleted!</h3>
+    [% END %]
+    <table>
+        <thead>
+            <tr>
+                <th>Title</th>
+                <th>Barcode</th>
+                <th>New message</th>
+                <th>Type</th>
+            </tr>
+        </thead>
+        <tbody>
+            [% FOREACH item IN updated_items %]
+                <tr>
+                    <td>[% item.title | html %]</td>
+                    <td>[% item.barcode | html %]</td>
+                    [% IF action == 'update_type' %]
+                        <td>[% item.message | html %]</td>
+                    [% ELSE %]
+                        <td>deleted</td>
+                    [% END %]
+                    <td>[% item.type | html %]</td>
+                </tr>
+            [% END %]
+        </tbody>
+    </table>
 </div>
 <br/>
 
