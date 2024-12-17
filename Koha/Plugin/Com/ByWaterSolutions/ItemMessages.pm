@@ -192,7 +192,7 @@ sub tool_step2 {
             itemnumber  => $item->itemnumber,
             barcode  => $item->barcode,
             title    => $biblio->title,
-            message  => '',   # Placeholder for item_messages.message
+            messages  => [],   # Placeholder for item_messages.message
             type     => '',   # Placeholder for item_messages.type
         };
     }
@@ -202,7 +202,7 @@ sub tool_step2 {
         my $dbh = C4::Context->dbh;
         my $placeholders = join(',', ('?') x @itemnumbers);
         my $query = qq{
-            SELECT itemnumber, message, type
+            SELECT itemnumber, message, type, item_message_id
             FROM item_messages
             WHERE itemnumber IN ($placeholders)
         };
@@ -213,8 +213,11 @@ sub tool_step2 {
         while (my $row = $sth->fetchrow_hashref) {
             my $itemnumber = $row->{itemnumber};
             if (exists $items_data{$itemnumber}) {
-                $items_data{$itemnumber}->{message} = $row->{message};
-                $items_data{$itemnumber}->{type}    = $row->{type};
+                push @{$items_data{$itemnumber}->{messages}}, {
+                    item_message_id => $row->{item_message_id},
+                    message => $row->{message},
+                    type    => $row->{type},
+                };
             }
         }
     }
@@ -235,19 +238,21 @@ sub tool_step3 {
     my $template = $self->get_template({ file => 'tool-step3.tt' });
     
     my @itemnumbers = $cgi->param('itemnumber');
+    my $action = $cgi->param('submitted2');
+    my $type = $cgi->param('type');
     my $dbh = C4::Context->dbh;
     if ( $cgi->param('submitted2') ) {
         my $new_message = $cgi->param('new_message');
 
-        unless (@itemnumbers) {
-            warn "No itemnumbers provided!";
+        unless ($type) {
+            warn "No type provided!";
             return;
         }
 
         my $query = qq{
             UPDATE item_messages
             SET message = ?
-            WHERE itemnumber = ?
+            WHERE type = ?
         };
 
         my $sth = $dbh->prepare($query);
@@ -256,7 +261,7 @@ sub tool_step3 {
             next unless $itemnumber;
 
             eval {
-                $sth->execute($new_message, $itemnumber);
+                $sth->execute($new_message, $type);
             };
             if ($@) {
                 warn "Failed to update message for itemnumber $itemnumber: $@";
@@ -273,7 +278,7 @@ sub tool_step3 {
         }
         my $query = qq{
             DELETE FROM  item_messages
-            WHERE itemnumber = ?
+            WHERE type = ?
         };
 
         my $sth = $dbh->prepare($query);
@@ -281,7 +286,7 @@ sub tool_step3 {
             next unless $itemnumber;
 
             eval {
-                $sth->execute($itemnumber);
+                $sth->execute($type);
             };
             if ($@) {
                 warn "Failed to update message for itemnumber $itemnumber: $@";
