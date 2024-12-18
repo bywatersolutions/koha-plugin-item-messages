@@ -127,7 +127,7 @@ sub tool {
     my ( $self, $args ) = @_;
 
     my $cgi = $self->{'cgi'};
-    if ( $cgi->param('submitted2') || $cgi->param('submitted3') ) {
+    if ( $cgi->param('update') || $cgi->param('delete') ) {
         $self->tool_step3();
     }
     elsif ( $cgi->param('submitted') ) {
@@ -238,12 +238,12 @@ sub tool_step3 {
     my $template = $self->get_template({ file => 'tool-step3.tt' });
     
     my @itemnumbers = $cgi->param('itemnumber');
-    my $action = $cgi->param('submitted2');
+    my $action = $cgi->param('action');
     my $type = $cgi->param('type');
     my $dbh = C4::Context->dbh;
     my @updated_items;
 
-    if ( $cgi->param('submitted2') ) {
+    if ( $action eq 'update' ) {
         my $new_message = $cgi->param('new_message');
 
         unless ($type) {
@@ -289,7 +289,7 @@ sub tool_step3 {
 
         $select_sth->finish;
 
-    } elsif ( $cgi->param('submitted3') )  {
+    } elsif ( $action eq 'delete' )  {
         unless (@itemnumbers) {
             warn "No itemnumbers provided!";
             return;

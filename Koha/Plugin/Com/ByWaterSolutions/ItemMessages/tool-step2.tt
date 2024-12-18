@@ -38,6 +38,7 @@
 <div id="doc3">
     <h1>Update item messages</h1>
     <div class="page-section">
+        <h3>Scanned items:</h3>
         [% INCLUDE 'csrf-token.inc' %]
         <table>
             <thead>
@@ -52,7 +53,7 @@
             [% FOREACH item IN scanned_items %]
                 [% IF item.messages.size > 0 %]
                     [% FOREACH message IN item.messages %]
-                        <tr>
+                        <tr class="[% message.type | html %]">
                             <td>[% item.title | html %]</td>
                             <td>[% item.barcode | html %]</td>
                             <td>[% message.message | html %]</td>
@@ -60,7 +61,7 @@
                         </tr>
                     [% END %]
                 [% ELSE %]
-                        <tr>
+                        <tr class="notype nomessage">
                             <td>[% item.title | html %]</td>
                             <td>[% item.barcode | html %]</td>
                             <td></td>
@@ -75,7 +76,7 @@
         <h3>Bulk update item messages by type:</h3>
         <ul class="nav nav-tabs" role="tablist">
             [% FOREACH av IN AuthorisedValues.Get('ITEM_MESSAGE_TYPE' ) %]
-                <li class="nav-item" role="presentation">
+                <li class="nav-item[% IF loop.count == 1 %] active[% END %]" role="presentation" data-type="[% av.authorised_value | html %]">
                     <a id="[% av.authorised_value | html %]-tab" class="nav-link[% IF loop.count == 1 %] active[% END %]" href="#[% av.authorised_value | html %]_panel" data-bs-toggle="tab" dat-bs-target="#[av.authorised_value | html]" role="tab" data-toggle="tab">[% av.authorised_value | html %]</a>
                 </li>    
             [% END %]
@@ -95,7 +96,8 @@
                             [% END %]
                             <h3>Actions for the item message type: [% av.authorised_value | html %]</h3>
                             <fieldset class="action">
-                                <label for="new_message_[% av.authorised_value | html %]">Update ALL item messages of the type [% av.authorised_value | html %] to:</label>
+                                <input type="radio" name="action" value="update">
+                                <label for="new_message_[% av.authorised_value | html %]">Update ALL item messages of the type <span class="badge text-bg-success">[% av.authorised_value | html %]</span> to:</label>
                                 [% IF type_options.size > 1 %]
                                     <select id="new_message_[% av.authorised_value | html %]" name="new_message">
                                         [% FOREACH option_type IN type_options %]
@@ -106,16 +108,12 @@
                                 <input id="new_message_[% av.authorised_value | html %]" name="new_message" type="text" />
                                 [% END %]
                                  <input type="hidden" name="type" value="[% av.authorised_value | html %]">
-                                <button type="submit" name="submitted2" value="update_type" class="btn btn-primary">Submit</button>
                             </fieldset>
                             <fieldset class="action">
-                                <label for="delete_message">Delete selected item messages</label>
-                                <select id="select_delete" name="select_delete">
-                                    <option value="0">No, don't delete.</option>
-                                    <option value="1">Yes, delete.</option>
-                                </select>
-                                <input type="submit" name="submitted3" class="btn btn-primary" value="Submit">
+                                <input type="radio" name="action" value="delete">
+                                <label for="delete_message">Delete all messages of the type <span class="badge text-bg-success">[% av.authorised_value | html %]</span>.</label>
                             </fieldset>
+                            <button type="submit" name="update" value="update_type" class="btn btn-primary">Submit</button>
                         </form>
                     </div>
             [% END %]
@@ -124,6 +122,66 @@
     </div>
 </div>
 <br/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script>
+    $(document).ready(function () {
 
+        $('form').on('submit', function (e) {
+            const action = $(this).find('input[name="action"]:checked').val();
+            if ( !action ) {
+                alert('Please select an action (update or delete) before submitting.');
+                e.preventDefault(); // Prevent form submission
+                return;
+            }
+            if (action == 'update') {
+                let multivalue = $(this).find('select[name="new_message"]').val();
+                let singlevalue = $(this).find('input[name="new_message"]').val();
+                if ( !multivalue && !singlevalue ) {
+                    alert('Please specify a message for updating.');
+                    e.preventDefault(); // Prevent form submission
+                    return;
+                }
+            }
+            let current_type = $('.nav-item.active').data('type');
+            let current_count = 0;
+            $('table tbody tr').each( function() {
+                let row_type = $(this).attr('class');
+                if ( current_type == row_type ) {
+                    current_count++;
+                }
+            });
+            if ( current_count == 0 ) {
+                alert('Please select at least one item message to update or delete.');
+                e.preventDefault();
+                return;
+            }
+            if ( !confirm(`Are you sure you want to ${action} ${current_count} item messages?`) ) {
+                e.preventDefault();
+                return;
+            }
+        });
+        
+        let first_tab_type = $('.nav-item.active').data('type');
+        $('table tbody tr').each( function() {
+            let row_type = $(this).attr('class');
+            if ( row_type == first_tab_type ) {
+                $(this).find('td').css('color' , 'red');
+            } else {
+                $(this).find('td').css('color' , 'unset');
+            }
+        });
+        $('.nav-item').on('click' , function() {
+            let tab_type = $(this).data('type');
+            $('table tbody tr').each( function() {
+                let row_type = $(this).attr('class');
+                if ( row_type == tab_type ) {
+                    $(this).find('td').css('color' , 'red');
+                } else {
+                    $(this).find('td').css('color' , 'unset');
+                }
+            });
+        });
+    });
+</script>
 
 [% INCLUDE 'intranet-bottom.inc' %]

@@ -35,7 +35,7 @@
 [% END #/ WRAPPER sub-header.inc %]
 
 <div id="doc3" class="page-section">
-    [% IF action == 'update_type' %]
+    [% IF action == 'update' %]
         <h3>[% updated_count %] item messages were successfully updated!</h3>
     [% ELSE %]
         <h3>[% updated_count %] item messages were successfully deleted!</h3>
@@ -54,7 +54,7 @@
                 <tr>
                     <td>[% item.title | html %]</td>
                     <td>[% item.barcode | html %]</td>
-                    [% IF action == 'update_type' %]
+                    [% IF action == 'update' %]
                         <td>[% item.message | html %]</td>
                     [% ELSE %]
                         <td>deleted</td>
@@ -64,6 +64,7 @@
             [% END %]
         </tbody>
     </table>
+    <a class="btn btn-primary" href="/cgi-bin/koha/plugins/run.pl?class=Koha::Plugin::Com::ByWaterSolutions::ItemMessages&method=tool">Return to tool</a>
 </div>
 <br/>
 
