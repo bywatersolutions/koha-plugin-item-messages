@@ -13,11 +13,18 @@
     [% t("Koha") | html %]
 [% END %]</title>
 [% INCLUDE 'doc-head-close.inc' %]
+<style>
+    fieldset.rows { 
+        margin-top .9em !important;
+    }
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 </head>
 
 <body id="plugins_item_message" class="plugins">
 [% INCLUDE 'header.inc' %]
 [% PROCESS 'about-team.inc' %]
+
 [% WRAPPER 'sub-header.inc' %]
     [% WRAPPER breadcrumbs %]
         [% IF blocking_error %]
@@ -35,7 +42,7 @@
     [% END #/ WRAPPER breadcrumbs %]
 [% END #/ WRAPPER sub-header.inc %]
 
-<div id="doc3">
+<div id="main container-fluid">
     <h1>Update item messages</h1>
     <div class="page-section">
         <h3>Scanned items:</h3>
@@ -73,59 +80,83 @@
             </tbody>
         </table>
     </div>
-        <div class="page-section">
-            <h3>Choose an action:</h3>
-            <form id="update_messages" method="post">
-                [% INCLUDE 'csrf-token.inc' %]
-                <input type="hidden" name="class" value="[% CLASS %]"/>
-                <input type="hidden" name="method" value="[% METHOD %]"/>
-                [% FOREACH item IN scanned_items %]
-                    <input type="hidden" name="itemnumber" value="[% item.itemnumber | html %]">
-                [% END %]
-                <div class="rows">
-                    <fieldset class="action">
+    <div>
+        <h3>Choose an action:</h3>
+        <form id="update_messages" method="post">
+            [% INCLUDE 'csrf-token.inc' %]
+            <input type="hidden" name="class" value="[% CLASS %]"/>
+            <input type="hidden" name="method" value="[% METHOD %]"/>
+            [% FOREACH item IN scanned_items %]
+                <input type="hidden" name="itemnumber" value="[% item.itemnumber | html %]">
+            [% END %]
+            <div>
+                <fieldset class="action rows">
+                    <ol>
+                    <li>
                         <input type="radio" name="action" value="update_all">
-                        <label for="new_message_all">Replace ALL scanned items with type of</label>
+                        <span style="font-size:125%;font-weight:bold;">Replace all</span>
+                    </li>
+                    <li>
+                        <label for="new_message_all">New message: </label>
                         <select id="new_type_all" name="new_type_all">
                             <option value="">--Choose a type--</option>
                             [% FOREACH av IN AuthorisedValues.Get('ITEM_MESSAGE_TYPE' ) %]
                                 <option value="[% av.authorised_value | html %]">[% av.authorised_value | html %]</option>
                             [% END %]
                         </select>
-                        <label>and message of:</label>
+                    </li>
+                    <li>
+                        <label>New type:</label>
                         <input id="new_message_all" name="new_message_all" type="text" />
                         <div class="hint" style="margin-left:2em;">This will REPLACE all scanned item's messages and types regardless of current item message or type.</div>
-                    </fieldset>
-                    <fieldset class="action">
-                        <input type="radio" name="action" value="update">
-                        <label for="new_message">Update each item messages with a type of </label>
-                        <select id="new_type" name="new_type">
-                            <option value="">--Choose a type--</option>
-                            [% FOREACH av IN AuthorisedValues.Get('ITEM_MESSAGE_TYPE' ) %]
-                                <option value="[% av.authorised_value | html %]">[% av.authorised_value | html %]</option>
-                            [% END %]
-                        </select>
-                        <label>to:</label>
-                        <input id="new_message" name="new_message" type="text" />
-                    </fieldset>
-                    <fieldset class="action">
-                        <input type="radio" name="action" value="delete">
-                        <label for="delete_message">Delete all messages of the type:</label>
-                        <select id="delete_type" name="delete_type">
-                            <option value="">--Choose a type--</option>
-                            [% FOREACH av IN AuthorisedValues.Get('ITEM_MESSAGE_TYPE' ) %]
-                                <option value="[% av.authorised_value | html %]">[% av.authorised_value | html %]</option>
-                            [% END %]
-                        </select>
-                    </fieldset>
-                </div>
+                    </li>
+                    </ol>
+                </fieldset>
+            </div>
+            <div>
+                <fieldset class="action rows">
+                    <ol>
+                        <li>
+                            <input type="radio" name="action" value="update">
+                            <span style="font-size:125%;font-weight:bold;">Replace all with type of:</span>
+                            <select id="new_type" name="new_type">
+                                <option value="">--Choose a type--</option>
+                                [% FOREACH av IN AuthorisedValues.Get('ITEM_MESSAGE_TYPE' ) %]
+                                    <option value="[% av.authorised_value | html %]">[% av.authorised_value | html %]</option>
+                                [% END %]
+                            </select>
+                        </li>
+                        <li>
+                            <label for="new_message">New message: </label>
+                            <input id="new_message" name="new_message" type="text" />
+                        </li>
+                    </ol>
+                </fieldset>
+            </div>
+            <div>
+                <fieldset class="action rows">
+                    <ol>
+                        <li>
+                            <input type="radio" name="action" value="delete">
+                            <span style="font-size:125%;font-weight:bold;">Delete all with type of:</span>
+                            <select id="delete_type" name="delete_type">
+                                <option value="">--Choose a type--</option>
+                                [% FOREACH av IN AuthorisedValues.Get('ITEM_MESSAGE_TYPE' ) %]
+                                    <option value="[% av.authorised_value | html %]">[% av.authorised_value | html %]</option>
+                                [% END %]
+                            </select>
+                        </li>
+                    </ol>
+                </fieldset>
+            </div>
+            <div class="page-section">
                 <button type="submit" name="update" value="update_type" class="btn btn-primary">Submit</button>
-            </form>
-        </div>
+            </div>
+        </form>
     </div>
 </div>
 <br/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+
 <script>
     $(document).ready(function () {
         $('#new_type').on('change',function() {
@@ -209,7 +240,12 @@
             if ( action == 'delete' || action == 'update' ) {
                 $('table tbody tr').each( function() {
                     let row_type = $(this).attr('class');
-                    let this_type = $('#new_type[name="new_type"]').val() || $('#delete_type[name="delete_type"]').val();
+                    let this_type;
+                    if ( action == 'update' ) {
+                        this_type = $('#new_type[name="new_type"]').val();
+                    } else {
+                        this_type = $('#delete_type[name="delete_type"]').val();
+                    }
                     if ( row_type == this_type ) {
                         count++;
                     }
