@@ -53,8 +53,9 @@
             [% FOREACH item IN scanned_items %]
                 [% IF item.messages.size > 0 %]
                     [% FOREACH message IN item.messages %]
+                        [% item.biblionumber %]
                         <tr class="[% message.type | html %]">
-                            <td>[% item.title | html %]</td>
+                            <td>[% INCLUDE 'biblio-title.inc' biblio=item.biblio link=1 %]</td>
                             <td>[% item.barcode | html %]</td>
                             <td>[% message.message | html %]</td>
                             <td><span class="badge text-bg-success">[% message.type | html %]</span></td>
@@ -73,50 +74,38 @@
         </table>
     </div>
     <div class="page-section">
-        <h3>Bulk update item messages by type:</h3>
-        <ul class="nav nav-tabs" role="tablist">
-            [% FOREACH av IN AuthorisedValues.Get('ITEM_MESSAGE_TYPE' ) %]
-                <li class="nav-item[% IF loop.count == 1 %] active[% END %]" role="presentation" data-type="[% av.authorised_value | html %]">
-                    <a id="[% av.authorised_value | html %]-tab" class="nav-link[% IF loop.count == 1 %] active[% END %]" href="#[% av.authorised_value | html %]_panel" data-bs-toggle="tab" dat-bs-target="#[av.authorised_value | html]" role="tab" data-toggle="tab">[% av.authorised_value | html %]</a>
-                </li>    
-            [% END %]
-        </ul>
-        <div class="tab-content">
-            [% FOREACH av IN AuthorisedValues.Get('ITEM_MESSAGE_TYPE' ) %]
-                [% SET type_options = av.lib_opac.split('\|') %]
-                    <div id="[% av.authorised_value | html %]_panel" class="tab-pane[% IF loop.count == 1 %] active[% END %]" role="tabpanel">
-                        <form id="update_messages" method="post">
-                            [% INCLUDE 'csrf-token.inc' %]
-                            <input type="hidden" name="class" value="[% CLASS %]"/>
-                            <input type="hidden" name="method" value="[% METHOD %]"/>
-                            [% FOREACH item IN scanned_items %]
-                                [% FOREACH message IN item.messages %]
-                                    <input name="itemnumber" type="hidden" value="[% message.item_message_id | html %]">
-                                [% END %]
-                            [% END %]
-                            <h3>Actions for the item message type: [% av.authorised_value | html %]</h3>
-                            <fieldset class="action">
-                                <input type="radio" name="action" value="update">
-                                <label for="new_message_[% av.authorised_value | html %]">Update ALL item messages of the type <span class="badge text-bg-success">[% av.authorised_value | html %]</span> to:</label>
-                                [% IF type_options.size > 1 %]
-                                    <select id="new_message_[% av.authorised_value | html %]" name="new_message">
-                                        [% FOREACH option_type IN type_options %]
-                                            <option value="[% option_type %]">[% option_type %]</optoin>
-                                        [% END %]
-                                    </select>
-                                [% ELSE %]
-                                <input id="new_message_[% av.authorised_value | html %]" name="new_message" type="text" />
-                                [% END %]
-                                 <input type="hidden" name="type" value="[% av.authorised_value | html %]">
-                            </fieldset>
-                            <fieldset class="action">
-                                <input type="radio" name="action" value="delete">
-                                <label for="delete_message">Delete all messages of the type <span class="badge text-bg-success">[% av.authorised_value | html %]</span>.</label>
-                            </fieldset>
-                            <button type="submit" name="update" value="update_type" class="btn btn-primary">Submit</button>
-                        </form>
-                    </div>
-            [% END %]
+        <h3>Bulk update ALL uploaded/scanned item messages:</h3>
+            <form id="update_messages" method="post">
+                [% INCLUDE 'csrf-token.inc' %]
+                <input type="hidden" name="class" value="[% CLASS %]"/>
+                <input type="hidden" name="method" value="[% METHOD %]"/>
+                [% FOREACH item IN scanned_items %]
+                    <input type="hidden" name="itemnumber" value="[% item.itemnumber | html %]">
+                [% END %]
+                <fieldset class="action">
+                    <input type="radio" name="action" value="update">
+                    <label for="new_message_[% av.authorised_value | html %]">Update ALL item messages to: </label>
+                    <input id="new_message" name="new_message" type="text" />
+                    <label>with a TYPE of:</label>
+                    <select id="new_type" name="new_type">
+                        <option value="">--Choose a type--</option>
+                        [% FOREACH av IN AuthorisedValues.Get('ITEM_MESSAGE_TYPE' ) %]
+                            <option value="[% av.authorised_value | html %]">[% av.authorised_value | html %]</option>
+                        [% END %]
+                    </select>
+                </fieldset>
+                <fieldset class="action">
+                    <input type="radio" name="action" value="delete">
+                    <label for="delete_message">Delete all messages of the type:</label>
+                    <select id="delete_type" name="delete_type">
+                        <option value="">--Choose a type--</option>
+                        [% FOREACH av IN AuthorisedValues.Get('ITEM_MESSAGE_TYPE' ) %]
+                            <option value="[% av.authorised_value | html %]">[% av.authorised_value | html %]</option>
+                        [% END %]
+                    </select>
+                </fieldset>
+                <button type="submit" name="update" value="update_type" class="btn btn-primary">Submit</button>
+            </form>
         </div>
     </div>
     </div>
@@ -125,6 +114,26 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 <script>
     $(document).ready(function () {
+        $('#new_type').on('change',function() {
+            let new_type = $(this).val();
+                let new_options = '';
+                [% FOREACH av IN AuthorisedValues.Get('ITEM_MESSAGE_TYPE' ) %]
+                    [% SET type_options = av.lib_opac.split('\|') %]
+                    if ( "[% av.authorised_value %]" == new_type ) {
+                        [% FOREACH option_type IN type_options %]
+                            new_options = new_options + '<option value="[% option_type %]">[% option_type %]</option>'
+                        [% END %]
+                    }
+                [% END %]
+            let html = '';
+            if ( new_options ) {
+                html = '<select id="new_message" name="new_message">'+ new_options + '</select>';
+            } else {
+                html = '<input id="new_message" name="new_message" type="text">';
+            }
+            console.log(html);
+            $('#new_message').replaceWith(html);
+        });
 
         $('form').on('submit', function (e) {
             const action = $(this).find('input[name="action"]:checked').val();
@@ -150,37 +159,12 @@
                     current_count++;
                 }
             });
-            if ( current_count == 0 ) {
-                alert('Please select at least one item message to update or delete.');
-                e.preventDefault();
-                return;
-            }
             if ( !confirm(`Are you sure you want to ${action} ${current_count} item messages?`) ) {
                 e.preventDefault();
                 return;
             }
         });
         
-        let first_tab_type = $('.nav-item.active').data('type');
-        $('table tbody tr').each( function() {
-            let row_type = $(this).attr('class');
-            if ( row_type == first_tab_type ) {
-                $(this).find('td').css('color' , 'red');
-            } else {
-                $(this).find('td').css('color' , 'unset');
-            }
-        });
-        $('.nav-item').on('click' , function() {
-            let tab_type = $(this).data('type');
-            $('table tbody tr').each( function() {
-                let row_type = $(this).attr('class');
-                if ( row_type == tab_type ) {
-                    $(this).find('td').css('color' , 'red');
-                } else {
-                    $(this).find('td').css('color' , 'unset');
-                }
-            });
-        });
     });
 </script>
 

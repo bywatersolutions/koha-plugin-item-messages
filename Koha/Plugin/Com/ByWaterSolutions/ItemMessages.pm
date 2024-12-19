@@ -192,7 +192,8 @@ sub tool_step2 {
             itemnumber  => $item->itemnumber,
             barcode  => $item->barcode,
             title    => $biblio->title,
-            messages  => [],   # Placeholder for item_messages.message
+            biblio   => $biblio,
+            messages => [],   # Placeholder for item_messages.message
             type     => '',   # Placeholder for item_messages.type
         };
     }
@@ -240,43 +241,64 @@ sub tool_step3 {
     my @itemnumbers = $cgi->param('itemnumber');
     my $action = $cgi->param('action');
     my $type = $cgi->param('type');
+    my $delete_type = $cgi->param('delete_type');
     my $dbh = C4::Context->dbh;
     my @updated_items;
 
     if ( $action eq 'update' ) {
         my $new_message = $cgi->param('new_message');
+        my $new_type = $cgi->param('new_type');
 
-        unless ($type) {
-            warn "No type provided!";
+        unless ($new_type && $new_message ) {
+            warn "No message or message type provided!";
             return;
         }
 
         my $placeholders = join(',', ('?') x scalar(@itemnumbers));
+
+        my $delete_query = qq{
+            DELETE FROM  item_messages
+            WHERE itemnumber IN ( $placeholders )
+        };
+
+        my $delete_sth = $dbh->prepare($delete_query);
+        $delete_sth->execute(@itemnumbers);
+
         my $query = qq{
-            UPDATE item_messages
-            SET message = ?
-            WHERE type = ?
-                AND item_message_id IN ( $placeholders )
+            INSERT  INTO item_messages (itemnumber, message, type)
+            VALUES (?, ?, ?)
         };
 
         my $sth = $dbh->prepare($query);
-        $sth->execute($new_message, $type, @itemnumbers);
+        foreach my $itemnumber (@itemnumbers) {
+            $sth->execute($itemnumber, $new_message, $new_type);
+        }
         
+        $sth->finish;
+
+    } elsif ( $action eq 'delete' )  {
+        unless (@itemnumbers) {
+            warn "No itemnumbers provided!";
+            return;
+        }
+
+        my $placeholders = join(',', ('?') x scalar(@itemnumbers));
         my $select_query = qq{
-            SELECT im.item_message_id, im.itemnumber, im.message AS message, im.type,
+            SELECT im.item_message_id, im.itemnumber, im.message AS old_message, im.type,
                    i.barcode, b.title
             FROM item_messages im
             JOIN items i ON im.itemnumber = i.itemnumber
             LEFT JOIN biblio b ON i.biblionumber = b.biblionumber
             WHERE im.type = ?
-              AND im.item_message_id IN ($placeholders)
+              AND i.itemnumber IN ($placeholders)
         };
 
         my $select_sth = $dbh->prepare($select_query);
-        $select_sth->execute($type, @itemnumbers);
+        $select_sth->execute($delete_type, @itemnumbers);
 
         while (my $row = $select_sth->fetchrow_hashref) {
             next unless $row;
+
             push @updated_items, {
                 item_message_id => $row->{item_message_id},
                 itemnumber      => $row->{itemnumber},
@@ -288,57 +310,22 @@ sub tool_step3 {
         }
 
         $select_sth->finish;
-
-    } elsif ( $action eq 'delete' )  {
-        unless (@itemnumbers) {
-            warn "No itemnumbers provided!";
-            return;
-        }
-
-        my $placeholders = join(',', ('?') x scalar(@itemnumbers));
-
-    my $select_query = qq{
-        SELECT im.item_message_id, im.itemnumber, im.message AS old_message, im.type,
-               i.barcode, b.title
-        FROM item_messages im
-        JOIN items i ON im.itemnumber = i.itemnumber
-        LEFT JOIN biblio b ON i.biblionumber = b.biblionumber
-        WHERE im.type = ?
-          AND im.item_message_id IN ($placeholders)
-    };
-    my $select_sth = $dbh->prepare($select_query);
-    $select_sth->execute($type, @itemnumbers);
-
-    while (my $row = $select_sth->fetchrow_hashref) {
-        next unless $row;
-
-        push @updated_items, {
-            item_message_id => $row->{item_message_id},
-            itemnumber      => $row->{itemnumber},
-            barcode         => $row->{barcode},
-            title           => $row->{title},
-            message         => $row->{message},
-            type            => $row->{type},
-        };
-    }
-    $select_sth->finish;
+        my $count = scalar @updated_items;
 
         my $query = qq{
             DELETE FROM  item_messages
             WHERE type = ?
-                AND item_message_id IN ( $placeholders )
+            AND itemnumber IN ( $placeholders )
         };
 
         my $sth = $dbh->prepare($query);
-        $sth->execute($type, @itemnumbers);
+        $sth->execute($delete_type, @itemnumbers);
+        $template->param(
+            action        => $action,
+            updated_count => $count,
+            updated_items => \@updated_items,
+        );
     }
-
-    my $count = scalar @updated_items;
-    $template->param(
-        action        => $action,
-        updated_count => $count,
-        updated_items => \@updated_items,
-    );
 
     $self->output_html( $template->output() );
 }
