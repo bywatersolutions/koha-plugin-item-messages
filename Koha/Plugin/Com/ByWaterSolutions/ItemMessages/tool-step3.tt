@@ -35,7 +35,7 @@
 [% END #/ WRAPPER sub-header.inc %]
 
 <div id="doc3" class="page-section">
-    [% IF action == 'update' %]
+    [% IF action == 'update' || action == 'update_all' %]
         <h3>[% updated_count %] item messages were successfully updated!</h3>
     [% ELSE %]
         <h3>[% updated_count %] item messages were successfully deleted!</h3>
@@ -45,8 +45,10 @@
             <tr>
                 <th>Title</th>
                 <th>Barcode</th>
+                <th>Old message</th>
                 <th>New message</th>
-                <th>Type</th>
+                <th>Old type</th>
+                <th>New type</th>
             </tr>
         </thead>
         <tbody>
@@ -54,12 +56,18 @@
                 <tr>
                     <td>[% item.title | html %]</td>
                     <td>[% item.barcode | html %]</td>
-                    [% IF action == 'update' %]
+                    <td>[% item.old_message | html %]</td>
+                    [% IF action == 'update' || action == 'update_all'  %]
                         <td>[% item.message | html %]</td>
                     [% ELSE %]
                         <td>deleted</td>
                     [% END %]
-                    <td>[% item.type | html %]</td>
+                    <td>[% item.old_type | html %]</td>
+                    [% IF action == 'update' || action == 'update_all'  %]
+                        <td>[% item.type | html %]</td>
+                    [% ELSE %]
+                        <td>deleted</td>
+                    [% END %]
                 </tr>
             [% END %]
         </tbody>

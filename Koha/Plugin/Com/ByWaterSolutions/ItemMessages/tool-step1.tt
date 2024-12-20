@@ -53,6 +53,15 @@
                 </li>
             </ol>
         </fieldset>
+        <fieldset class="rows">
+            <legend>Or scan items one by one</legend>
+            <ol>
+                <li>
+                    <label for="barcodelist">Barcode list (one barcode per line): </label>
+                    <textarea rows="10" cols="30" id="barcodelist" name="barcodelist"></textarea>
+                </li>
+            </ol>
+        </fieldset>
 
         <fieldset class="action">
             <input type="submit" name="submitted" class="btn btn-primary" value="Submit">
