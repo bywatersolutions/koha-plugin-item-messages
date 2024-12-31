@@ -61,7 +61,7 @@
                 [% IF item.messages.size > 0 %]
                     [% FOREACH message IN item.messages %]
                         [% item.biblionumber %]
-                        <tr class="[% message.type | html %]">
+                        <tr class="row_type" data-message-type="[% message.type | html %]" data-message-id="[% message.item_message_id %]">
                             <td>[% INCLUDE 'biblio-title.inc' biblio=item.biblio link=1 %]</td>
                             <td>[% item.barcode | html %]</td>
                             <td>[% message.message | html %]</td>
@@ -92,44 +92,19 @@
             <div>
                 <fieldset class="action rows">
                     <ol>
+
                     <li>
                         <input type="radio" name="action" value="update_all">
                         <span style="font-size:125%;font-weight:bold;">Replace all</span>
                     </li>
-                    <li>
-                        <label for="new_message_all">New message: </label>
-                        <select id="new_type_all" name="new_type_all">
-                            <option value="">--Choose a type--</option>
-                            [% FOREACH av IN AuthorisedValues.Get('ITEM_MESSAGE_TYPE' ) %]
-                                <option value="[% av.authorised_value | html %]">[% av.authorised_value | html %]</option>
-                            [% END %]
-                        </select>
-                    </li>
-                    <li>
-                        <label>New type:</label>
-                        <input id="new_message_all" name="new_message_all" type="text" />
-                        <div class="hint" style="margin-left:2em;">This will REPLACE all scanned item's messages and types regardless of current item message or type.</div>
-                    </li>
-                    </ol>
-                </fieldset>
-            </div>
-            <div>
-                <fieldset class="action rows">
-                    <ol>
-                        <li>
-                            <input type="radio" name="action" value="update">
-                            <span style="font-size:125%;font-weight:bold;">Replace all with type of:</span>
-                            <select id="new_type" name="new_type">
-                                <option value="">--Choose a type--</option>
-                                [% FOREACH av IN AuthorisedValues.Get('ITEM_MESSAGE_TYPE' ) %]
-                                    <option value="[% av.authorised_value | html %]">[% av.authorised_value | html %]</option>
-                                [% END %]
-                            </select>
+                    [% FOREACH message_type IN distinct_message_types %]
+                        <li class="type_row" data-message-type="[% message_type | html %]">
+                            <span class="badge text-bg-success">[% message_type | html %]</span>
+                            <span>New message:</span>
+                            <input id="new_message_[% message_type | html %]" name="new_message_[% message_type | html %]" type="text" />
+                            <input type="checkbox" id="new_type_[% message_type %]" class="new_type" name="checkbox_[% message_type %]" value="1" data-message-type="[% message_type | html%]">
                         </li>
-                        <li>
-                            <label for="new_message">New message: </label>
-                            <input id="new_message" name="new_message" type="text" />
-                        </li>
+                    [% END %]
                     </ol>
                 </fieldset>
             </div>
@@ -159,6 +134,27 @@
 
 <script>
     $(document).ready(function () {
+        $('.new_type').on('click',function() {
+            let cb_type = $(this).data('message-type');     
+            if ( !$(this).prop('checked') ) {
+                $('.row_type').each( function() {
+                    let row_type = $(this).data('message-type');
+                    let row_message_id = $(this).data('message-id');
+                    if ( row_type === cb_type ) {
+                        /*FIXME*/
+                    }
+                });
+            } else {
+                $('.row_type').each( function() {
+                    let row_type = $(this).data('message-type');
+                    let row_message_id = $(this).data('message-id');
+                    if ( row_type === cb_type ) {
+                        $('form').append(`<input type="hidden" name="item_message_id_${row_message_id}" value="${row_message_id}">`);
+                    }
+                });
+            }
+        });
+
         $('#new_type').on('change',function() {
             let new_type = $(this).val();
                 let new_options = '';
@@ -206,7 +202,7 @@
                 e.preventDefault(); // Prevent form submission
                 return;
             }
-
+/*
             if (action == 'update_all') {
                 let new_type = $('#new_type_all[name="new_type_all"]').val();
                 let new_message = $('#new_message_all[name="new_message_all"]').val();
@@ -216,17 +212,7 @@
                     return;
                 }
             }
-
-            if (action == 'update') {
-                let new_type = $('#new_type[name="new_type"]').val();
-                let new_message = $('#new_message[name="new_message"]').val();
-                if ( !new_type || !new_message ) {
-                    alert('Please specify a message and an item message type for updating.');
-                    e.preventDefault(); // Prevent form submission
-                    return;
-                }
-            }
-
+*/
             if (action == 'delete') {
                 let delete_type = $('#delete_type[name="delete_type"]').val();
                 if ( !delete_type ) {

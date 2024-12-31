@@ -199,6 +199,8 @@ sub tool_step2 {
         };
     }
 
+    my %message_types;
+
     if (%items_data) {
         my @itemnumbers = keys %items_data;
         my $dbh = C4::Context->dbh;
@@ -220,13 +222,16 @@ sub tool_step2 {
                     message => $row->{message},
                     type    => $row->{type},
                 };
+                $message_types{ $row->{type} } = 1;
             }
         }
     }
 
     my @scanned_items = values %items_data;
+    my @distinct_message_types = keys %message_types;
 
     $template->param(
+        distinct_message_types => \@distinct_message_types,
         scanned_items => \@scanned_items,
     );   
 
@@ -234,6 +239,7 @@ sub tool_step2 {
 }
 
 sub tool_step3 {
+
     my ( $self, $args ) = @_;
     my $cgi = $self->{'cgi'};
 
@@ -241,154 +247,112 @@ sub tool_step3 {
     
     my @itemnumbers = $cgi->param('itemnumber');
     my $action = $cgi->param('action');
-    my $type = $cgi->param('type');
     my $delete_type = $cgi->param('delete_type');
     my $dbh = C4::Context->dbh;
     my @updated_items;
     my @old_messages;
-
+    warn Data::Dumper::Dumper( $action );
     if ( $action eq 'update_all') {
-        my $new_message = $cgi->param('new_message_all');
-        my $new_type = $cgi->param('new_type_all');
+        my %new_messages;
 
-        my $placeholders = join(',', ('?') x scalar(@itemnumbers));
+        foreach my $param ($cgi->param) {
+            if ($param =~ /^new_message_(.+)$/) {
+                my $type = $1;  # Extract type from the parameter name
+                my $message = $cgi->param($param);
 
-        my $fetch_query = qq{
-            SELECT itemnumber, message, type
-            FROM item_messages
-              WHERE itemnumber IN ($placeholders)
-        };
-        my $fetch_sth = $dbh->prepare($fetch_query);
-        $fetch_sth->execute(@itemnumbers);
+                # Only process if the corresponding checkbox is checked
+                if ($cgi->param("checkbox_$type")) {
+                    $new_messages{$type} = $message;
 
-        while (my $row = $fetch_sth->fetchrow_hashref) {
-            push @old_messages, {
-                itemnumber   => $row->{itemnumber},
-                old_message  => $row->{message},
-                old_type     => $row->{type},
-            };
+                    # Debugging to verify extraction
+                    warn "Added to new_messages: $type => $message";
+                } else {
+                    warn "Checkbox for $type not checked; skipping";
+                }
+            }
         }
-        $fetch_sth->finish;
 
-        my $delete_query = qq{
-            DELETE FROM  item_messages
-            WHERE itemnumber IN ( $placeholders )
-        };
+        return unless keys %new_messages; # No messages to update
 
-        my $delete_sth = $dbh->prepare($delete_query);
-        $delete_sth->execute(@itemnumbers);
+        my $item_placeholders = join(',', ('?') x scalar(@itemnumbers));
+        my $type_placeholders = join(',', ('?') x scalar(keys %new_messages));
+        warn "item_placeholders" . Data::Dumper::Dumper($item_placeholders);
+        warn "type_placeholders" . Data::Dumper::Dumper($type_placeholders);
 
-        my $query = qq{
+        if ($type_placeholders && $item_placeholders) {
+            my $fetch_query = qq{
+                SELECT itemnumber, message, type
+                FROM item_messages
+                WHERE type IN ( $type_placeholders )
+                  AND itemnumber IN ( $item_placeholders )
+            };
+
+            my $fetch_sth = $dbh->prepare($fetch_query);
+            $fetch_sth->execute(keys %new_messages, @itemnumbers);
+
+            while (my $row = $fetch_sth->fetchrow_hashref) {
+                push @old_messages, {
+                    itemnumber   => $row->{itemnumber},
+                    old_message  => $row->{message},
+                    old_type     => $row->{type},
+                };
+            }
+            $fetch_sth->finish;
+        }
+        if ($type_placeholders && $item_placeholders) {
+            my $delete_query = qq{
+                DELETE FROM  item_messages
+                WHERE type IN ( $type_placeholders )
+                  AND itemnumber IN ( $item_placeholders )
+            };
+
+            my $delete_sth = $dbh->prepare($delete_query);
+            $delete_sth->execute(keys %new_messages, @itemnumbers);
+        }
+
+        my $insert_query = qq{
             INSERT  INTO item_messages (itemnumber, message, type)
             VALUES (?, ?, ?)
         };
 
-        my $sth = $dbh->prepare($query);
-        foreach my $itemnumber (@itemnumbers) {
-            $sth->execute($itemnumber, $new_message, $new_type);
+        my $sth = $dbh->prepare($insert_query);
+
+        foreach my $type (keys %new_messages) {
+            my $new_message = $new_messages{$type};
+            foreach my $itemnumber (@itemnumbers) {
+                $sth->execute($itemnumber, $new_message, $type);
+            }
         }
-        
+
         $sth->finish;
 
-        my $select_query = qq{
-            SELECT im.item_message_id, im.itemnumber, im.message AS message, im.type,
-                   i.barcode, b.title
-            FROM item_messages im
-            JOIN items i ON im.itemnumber = i.itemnumber
-            LEFT JOIN biblio b ON i.biblionumber = b.biblionumber
-              WHERE im.itemnumber IN ($placeholders)
-        };
-
-        my $select_sth = $dbh->prepare($select_query);
-        $select_sth->execute(@itemnumbers);
-
-        while (my $row = $select_sth->fetchrow_hashref) {
-            next unless $row;
-            push @updated_items, {
-                item_message_id => $row->{item_message_id},
-                itemnumber      => $row->{itemnumber},
-                barcode         => $row->{barcode},
-                title           => $row->{title},
-                message         => $row->{message},
-                type            => $row->{type},
+        if ($type_placeholders && $item_placeholders) {
+            my $select_query = qq{
+                SELECT im.item_message_id, im.itemnumber, im.message AS message, im.type,
+                       i.barcode, b.title
+                FROM item_messages im
+                JOIN items i ON im.itemnumber = i.itemnumber
+                LEFT JOIN biblio b ON i.biblionumber = b.biblionumber
+                WHERE im.type IN ($type_placeholders)
+                  AND im.itemnumber IN ($item_placeholders)
             };
+
+            my $select_sth = $dbh->prepare($select_query);
+            $select_sth->execute(keys %new_messages, @itemnumbers);
+
+            while (my $row = $select_sth->fetchrow_hashref) {
+                next unless $row;
+                push @updated_items, {
+                    item_message_id => $row->{item_message_id},
+                    itemnumber      => $row->{itemnumber},
+                    barcode         => $row->{barcode},
+                    title           => $row->{title},
+                    message         => $row->{message},
+                    type            => $row->{type},
+                };
+            }
+            $select_sth->finish;
         }
-        $select_sth->finish;
-    } elsif ( $action eq 'update' ) {
-        my $new_message = $cgi->param('new_message');
-        my $new_type = $cgi->param('new_type');
-
-        unless ($new_type && $new_message ) {
-            warn "No message or message type provided!";
-            return;
-        }
-
-        my $placeholders = join(',', ('?') x scalar(@itemnumbers));
-
-        my $fetch_query = qq{
-            SELECT itemnumber, message, type
-            FROM item_messages
-            WHERE type = ?
-              AND itemnumber IN ($placeholders)
-        };
-        my $fetch_sth = $dbh->prepare($fetch_query);
-        $fetch_sth->execute($new_type, @itemnumbers);
-
-        while (my $row = $fetch_sth->fetchrow_hashref) {
-            push @old_messages, {
-                itemnumber   => $row->{itemnumber},
-                old_message  => $row->{message},
-                old_type     => $row->{type},
-            };
-        }
-        $fetch_sth->finish;
-
-        my $delete_query = qq{
-            DELETE FROM  item_messages
-            WHERE type = ?
-            AND itemnumber IN ( $placeholders )
-        };
-
-        my $delete_sth = $dbh->prepare($delete_query);
-        $delete_sth->execute($new_type, @itemnumbers);
-
-        my $query = qq{
-            INSERT  INTO item_messages (itemnumber, message, type)
-            VALUES (?, ?, ?)
-        };
-
-        my $sth = $dbh->prepare($query);
-        foreach my $itemnumber (@itemnumbers) {
-            $sth->execute($itemnumber, $new_message, $new_type);
-        }
-        
-        $sth->finish;
-
-        my $select_query = qq{
-            SELECT im.item_message_id, im.itemnumber, im.message AS message, im.type,
-                   i.barcode, b.title
-            FROM item_messages im
-            JOIN items i ON im.itemnumber = i.itemnumber
-            LEFT JOIN biblio b ON i.biblionumber = b.biblionumber
-            WHERE im.type = ?
-              AND im.itemnumber IN ($placeholders)
-        };
-
-        my $select_sth = $dbh->prepare($select_query);
-        $select_sth->execute($new_type, @itemnumbers);
-
-        while (my $row = $select_sth->fetchrow_hashref) {
-            next unless $row;
-            push @updated_items, {
-                item_message_id => $row->{item_message_id},
-                itemnumber      => $row->{itemnumber},
-                barcode         => $row->{barcode},
-                title           => $row->{title},
-                message         => $row->{message},
-                type            => $row->{type},
-            };
-        }
-        $select_sth->finish;
 
     } elsif ( $action eq 'delete' )  {
         unless (@itemnumbers) {
@@ -435,7 +399,7 @@ sub tool_step3 {
         $sth->execute($delete_type, @itemnumbers);
     }
 
-    if ( $action eq 'update' || $action eq 'update_all' ) {
+    if ( $action eq 'update_all' ) {
         foreach my $updated_item (@updated_items) {
             my ($old_data) = grep { $_->{itemnumber} == $updated_item->{itemnumber} } @old_messages;
             $updated_item->{old_message} = $old_data->{old_message} // 'No Previous Message';
