@@ -222,13 +222,13 @@ sub tool_step2 {
                     message => $row->{message},
                     type    => $row->{type},
                 };
-                $message_types{ $row->{type} } = 1;
+                push @{$message_types{$row->{type}}}, $row->{item_message_id};
             }
         }
     }
 
     my @scanned_items = values %items_data;
-    my @distinct_message_types = keys %message_types;
+    my @distinct_message_types = map { { type => $_, item_message_ids => $message_types{$_} } } keys %message_types;
 
     $template->param(
         distinct_message_types => \@distinct_message_types,
@@ -251,91 +251,61 @@ sub tool_step3 {
     my $dbh = C4::Context->dbh;
     my @updated_items;
     my @old_messages;
+    my @item_message_ids = $cgi->param('item_message_id');
+
     if ( $action eq 'update_all') {
         my %new_messages;
+        foreach my $type ($cgi->param) {
+            if ($type =~ /^new_message_(.+)$/) {
+                my $message_type = $1;  # Extract type (e.g., TWO, ONE)
+                my $new_message = $cgi->param("new_message_$message_type");
+                my $checkbox_checked = $cgi->param("checkbox_$message_type");
 
-        foreach my $param ($cgi->param) {
-            if ($param =~ /^new_message_(.+)$/) {
-                my $type = $1;  # Extract type from the parameter name
-                my $message = $cgi->param($param);
+                next unless $checkbox_checked;
 
-                # Only process if the corresponding checkbox is checked
-                if ($cgi->param("checkbox_$type")) {
-                    $new_messages{$type} = $message;
-
-                    # Debugging to verify extraction
-                    warn "Added to new_messages: $type => $message";
+                # Find associated item_message_ids for this type
+                foreach my $item_message_id (@item_message_ids) {
+                    my $data_type = $cgi->param("data_message_type_$item_message_id");
+                    if ($data_type && $data_type eq $message_type) {
+                        $new_messages{$item_message_id} = $new_message;
+                    }
                 }
             }
         }
-
         return unless keys %new_messages; # No messages to update
-
-        my $item_placeholders = join(',', ('?') x scalar(@itemnumbers));
-        my $type_placeholders = join(',', ('?') x scalar(keys %new_messages));
-
-        if ($type_placeholders && $item_placeholders) {
-            my $fetch_query = qq{
-                SELECT itemnumber, message, type
-                FROM item_messages
-                WHERE type IN ( $type_placeholders )
-                  AND itemnumber IN ( $item_placeholders )
-            };
-
-            my $fetch_sth = $dbh->prepare($fetch_query);
-            $fetch_sth->execute(keys %new_messages, @itemnumbers);
-
-            while (my $row = $fetch_sth->fetchrow_hashref) {
-                push @old_messages, {
-                    itemnumber   => $row->{itemnumber},
-                    old_message  => $row->{message},
-                    old_type     => $row->{type},
-                };
-            }
-            $fetch_sth->finish;
-        }
-        if ($type_placeholders && $item_placeholders) {
-            my $delete_query = qq{
-                DELETE FROM  item_messages
-                WHERE type IN ( $type_placeholders )
-                  AND itemnumber IN ( $item_placeholders )
-            };
-
-            my $delete_sth = $dbh->prepare($delete_query);
-            $delete_sth->execute(keys %new_messages, @itemnumbers);
-        }
-
-        my $insert_query = qq{
-            INSERT  INTO item_messages (itemnumber, message, type)
-            VALUES (?, ?, ?)
+                
+        my $update_query = qq{
+            UPDATE item_messages
+            SET message = ?
+            WHERE item_message_id = ?
         };
+        my $sth = $dbh->prepare($update_query) or die "Prepare failed: $DBI::errstr";
 
-        my $sth = $dbh->prepare($insert_query);
-
-        foreach my $type (keys %new_messages) {
-            warn "TYPE" . Data::Dumper::Dumper( $type );
-            my $new_message = $new_messages{$type};
-            foreach my $itemnumber (@itemnumbers) {
-                $sth->execute($itemnumber, $new_message, $type);
-            }
+        # Execute updates
+        foreach my $item_message_id (keys %new_messages) {
+            my $new_message = $new_messages{$item_message_id};
+            $sth->execute($new_message, $item_message_id);
         }
 
         $sth->finish;
 
-        if ($type_placeholders && $item_placeholders) {
+        if (%new_messages) {
+            # Prepare placeholders for item_message_ids
+            my $id_placeholders = join(',', ('?') x keys %new_messages);
+
             my $select_query = qq{
                 SELECT im.item_message_id, im.itemnumber, im.message AS message, im.type,
                        i.barcode, b.title
                 FROM item_messages im
                 JOIN items i ON im.itemnumber = i.itemnumber
                 LEFT JOIN biblio b ON i.biblionumber = b.biblionumber
-                WHERE im.type IN ($type_placeholders)
-                  AND im.itemnumber IN ($item_placeholders)
+                WHERE im.item_message_id IN ($id_placeholders)
             };
 
             my $select_sth = $dbh->prepare($select_query);
-            $select_sth->execute(keys %new_messages, @itemnumbers);
+            $select_sth->execute(keys %new_messages);
 
+            # Collect updated items for reporting
             while (my $row = $select_sth->fetchrow_hashref) {
                 next unless $row;
                 push @updated_items, {
@@ -393,14 +363,6 @@ sub tool_step3 {
 
         my $sth = $dbh->prepare($query);
         $sth->execute($delete_type, @itemnumbers);
-    }
-
-    if ( $action eq 'update_all' ) {
-        foreach my $updated_item (@updated_items) {
-            my ($old_data) = grep { $_->{itemnumber} == $updated_item->{itemnumber} } @old_messages;
-            $updated_item->{old_message} = $old_data->{old_message} // 'No Previous Message';
-            $updated_item->{old_type} = $old_data->{old_type} // 'No Previous Type';
-        }
     }
 
     my $count = scalar @updated_items;
