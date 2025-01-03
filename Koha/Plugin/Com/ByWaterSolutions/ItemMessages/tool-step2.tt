@@ -134,22 +134,34 @@
 
 <script>
     $(document).ready(function () {
-        $('.new_type').on('click',function() {
-            let cb_type = $(this).data('message-type');     
-            if ( !$(this).prop('checked') ) {
-                $('.row_type').each( function() {
+
+        $('.new_type').on('click', function () {
+            let cb_type = $(this).data('message-type');
+
+            if (!$(this).prop('checked')) {
+                // Handle unchecking logic
+                $('.row_type').each(function () {
                     let row_type = $(this).data('message-type');
                     let row_message_id = $(this).data('message-id');
-                    if ( row_type === cb_type ) {
-                        /*FIXME*/
+
+                    if (row_type === cb_type) {
+                        // Remove hidden input for unchecked type
+                        $(`input[name="item_message_id_${row_message_id}"]`).remove();
                     }
                 });
             } else {
-                $('.row_type').each( function() {
+                // Handle checking logic
+                $('.row_type').each(function () {
                     let row_type = $(this).data('message-type');
                     let row_message_id = $(this).data('message-id');
-                    if ( row_type === cb_type ) {
-                        $('form').append(`<input type="hidden" name="item_message_id_${row_message_id}" value="${row_message_id}">`);
+
+                    if (row_type === cb_type) {
+                        // Add hidden input if not already present
+                        if ($(`input[name="item_message_id_${row_message_id}"]`).length === 0) {
+                            $('form').append(
+                                `<input type="hidden" name="item_message_id_${row_message_id}" value="${row_message_id}">`
+                            );
+                        }
                     }
                 });
             }

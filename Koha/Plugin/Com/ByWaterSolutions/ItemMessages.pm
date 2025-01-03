@@ -251,7 +251,6 @@ sub tool_step3 {
     my $dbh = C4::Context->dbh;
     my @updated_items;
     my @old_messages;
-    warn Data::Dumper::Dumper( $action );
     if ( $action eq 'update_all') {
         my %new_messages;
 
@@ -266,8 +265,6 @@ sub tool_step3 {
 
                     # Debugging to verify extraction
                     warn "Added to new_messages: $type => $message";
-                } else {
-                    warn "Checkbox for $type not checked; skipping";
                 }
             }
         }
@@ -276,8 +273,6 @@ sub tool_step3 {
 
         my $item_placeholders = join(',', ('?') x scalar(@itemnumbers));
         my $type_placeholders = join(',', ('?') x scalar(keys %new_messages));
-        warn "item_placeholders" . Data::Dumper::Dumper($item_placeholders);
-        warn "type_placeholders" . Data::Dumper::Dumper($type_placeholders);
 
         if ($type_placeholders && $item_placeholders) {
             my $fetch_query = qq{
@@ -318,6 +313,7 @@ sub tool_step3 {
         my $sth = $dbh->prepare($insert_query);
 
         foreach my $type (keys %new_messages) {
+            warn "TYPE" . Data::Dumper::Dumper( $type );
             my $new_message = $new_messages{$type};
             foreach my $itemnumber (@itemnumbers) {
                 $sth->execute($itemnumber, $new_message, $type);
