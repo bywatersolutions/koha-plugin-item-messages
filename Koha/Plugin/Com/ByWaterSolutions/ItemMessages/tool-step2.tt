@@ -61,7 +61,7 @@
                 [% IF item.messages.size > 0 %]
                     [% FOREACH message IN item.messages %]
                         [% item.biblionumber %]
-                        <tr class="[% message.type | html %]">
+                        <tr class="row_type" data-message-type="[% message.type | html %]" data-message-id="[% message.item_message_id %]">
                             <td>[% INCLUDE 'biblio-title.inc' biblio=item.biblio link=1 %]</td>
                             <td>[% item.barcode | html %]</td>
                             <td>[% message.message | html %]</td>
@@ -72,8 +72,7 @@
                         <tr class="notype nomessage">
                             <td>[% INCLUDE 'biblio-title.inc' biblio=item.biblio link=1 %]</td>
                             <td>[% item.barcode | html %]</td>
-                            <td></td>
-                            <td></td>
+                            <td colspan="2" style="background:#FFCCCB;">No item messages to update or delete.</td>
                         </tr>
                 [% END %]
             [% END %]
@@ -92,44 +91,23 @@
             <div>
                 <fieldset class="action rows">
                     <ol>
+
                     <li>
                         <input type="radio" name="action" value="update_all">
-                        <span style="font-size:125%;font-weight:bold;">Replace all</span>
+                        <span style="font-size:125%;font-weight:bold;">Update all with a type of:</span>
                     </li>
-                    <li>
-                        <label for="new_message_all">New message: </label>
-                        <select id="new_type_all" name="new_type_all">
-                            <option value="">--Choose a type--</option>
-                            [% FOREACH av IN AuthorisedValues.Get('ITEM_MESSAGE_TYPE' ) %]
-                                <option value="[% av.authorised_value | html %]">[% av.authorised_value | html %]</option>
+                    [% FOREACH type_data IN distinct_message_types %]
+                        <li>
+                            <span class="badge text-bg-success">[% type_data.type | html %]</span>
+                            <span>New message:</span>
+                            <input id="new_message_[% type_data.type | html %]" name="new_message_[% type_data.type | html %]" type="text" />
+                            <input type="checkbox" id="new_type_[% type_data.type | html %]" class="new_type" name="checkbox_[% type_data.type | html %]" value="1" data-message-type="[% type_data.type | html %]">
+                            [% FOREACH id IN type_data.item_message_ids %]
+                                <input type="hidden" name="item_message_id" value="[% id %]">
+                                <input type="hidden" name="data_message_type_[% id %]" value="[% type_data.type %]">
                             [% END %]
-                        </select>
-                    </li>
-                    <li>
-                        <label>New type:</label>
-                        <input id="new_message_all" name="new_message_all" type="text" />
-                        <div class="hint" style="margin-left:2em;">This will REPLACE all scanned item's messages and types regardless of current item message or type.</div>
-                    </li>
-                    </ol>
-                </fieldset>
-            </div>
-            <div>
-                <fieldset class="action rows">
-                    <ol>
-                        <li>
-                            <input type="radio" name="action" value="update">
-                            <span style="font-size:125%;font-weight:bold;">Replace all with type of:</span>
-                            <select id="new_type" name="new_type">
-                                <option value="">--Choose a type--</option>
-                                [% FOREACH av IN AuthorisedValues.Get('ITEM_MESSAGE_TYPE' ) %]
-                                    <option value="[% av.authorised_value | html %]">[% av.authorised_value | html %]</option>
-                                [% END %]
-                            </select>
                         </li>
-                        <li>
-                            <label for="new_message">New message: </label>
-                            <input id="new_message" name="new_message" type="text" />
-                        </li>
+                    [% END %]
                     </ol>
                 </fieldset>
             </div>
@@ -159,46 +137,9 @@
 
 <script>
     $(document).ready(function () {
-        $('#new_type').on('change',function() {
-            let new_type = $(this).val();
-                let new_options = '';
-                [% FOREACH av IN AuthorisedValues.Get('ITEM_MESSAGE_TYPE' ) %]
-                    [% SET type_options = av.lib_opac.split('\|') %]
-                    if ( "[% av.authorised_value %]" == new_type ) {
-                        [% FOREACH option_type IN type_options %]
-                            new_options = new_options + '<option value="[% option_type %]">[% option_type %]</option>'
-                        [% END %]
-                    }
-                [% END %]
-            let html = '';
-            if ( new_options ) {
-                html = '<select id="new_message" name="new_message">'+ new_options + '</select>';
-            } else {
-                html = '<input id="new_message" name="new_message" type="text">';
-            }
-            $('#new_message').replaceWith(html);
-        });
-
-        $('#new_type_all').on('change',function() {
-            let new_type = $(this).val();
-                let new_options = '';
-                [% FOREACH av IN AuthorisedValues.Get('ITEM_MESSAGE_TYPE' ) %]
-                    [% SET type_options = av.lib_opac.split('\|') %]
-                    if ( "[% av.authorised_value %]" == new_type ) {
-                        [% FOREACH option_type IN type_options %]
-                            new_options = new_options + '<option value="[% option_type %]">[% option_type %]</option>'
-                        [% END %]
-                    }
-                [% END %]
-            let html = '';
-            if ( new_options ) {
-                html = '<select id="new_message_all" name="new_message_all">'+ new_options + '</select>';
-            } else {
-                html = '<input id="new_message_all" name="new_message_all" type="text">';
-            }
-            $('#new_message_all').replaceWith(html);
-        });
-
+        
+        let no_message_count = $('.nomessage').length;
+        console.log(no_message_count);
         $('form').on('submit', function (e) {
             const action = $(this).find('input[name="action"]:checked').val();
             if ( !action ) {
@@ -206,22 +147,10 @@
                 e.preventDefault(); // Prevent form submission
                 return;
             }
-
             if (action == 'update_all') {
-                let new_type = $('#new_type_all[name="new_type_all"]').val();
-                let new_message = $('#new_message_all[name="new_message_all"]').val();
-                if ( !new_type || !new_message ) {
-                    alert('Please specify a message and an item message type for updating.');
-                    e.preventDefault(); // Prevent form submission
-                    return;
-                }
-            }
-
-            if (action == 'update') {
-                let new_type = $('#new_type[name="new_type"]').val();
-                let new_message = $('#new_message[name="new_message"]').val();
-                if ( !new_type || !new_message ) {
-                    alert('Please specify a message and an item message type for updating.');
+                let update_count = $('.new_type:checked').length;
+                if ( !update_count || update_count < 1 ) {
+                    alert('Please specify at least one  item message TYPE for updating.');
                     e.preventDefault(); // Prevent form submission
                     return;
                 }
@@ -230,14 +159,19 @@
             if (action == 'delete') {
                 let delete_type = $('#delete_type[name="delete_type"]').val();
                 if ( !delete_type ) {
-                    alert('Please specify an item message type for deleting.');
+                    alert('Please specify an item message TYPE for deleting.');
                     e.preventDefault(); // Prevent form submission
                     return;
                 }
             }
 
-            let count = 0;
-            if ( action == 'delete' || action == 'update' ) {
+            if ( action == 'delete' || action == 'update_all' ) {
+                let types = [];
+                $('.new_type:checked').each( function() {
+                    let chosen_type = $(this).data('message-type');
+                    console.log( $('row_type[data-message-type="'+chosen_type+'"]').length );
+                });
+
                 $('table tbody tr').each( function() {
                     let row_type = $(this).attr('class');
                     let this_type;
