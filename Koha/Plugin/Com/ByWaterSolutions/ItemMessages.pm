@@ -250,7 +250,6 @@ sub tool_step3 {
     my $delete_type = $cgi->param('delete_type');
     my $dbh = C4::Context->dbh;
     my @updated_items;
-    my @old_messages;
     my @item_message_ids = $cgi->param('item_message_id');
 
     if ( $action eq 'update_all') {
@@ -274,6 +273,23 @@ sub tool_step3 {
         }
         return unless keys %new_messages; # No messages to update
                 
+        # Fetch old messages for reporting
+        my $id_placeholders = join(',', ('?') x keys %new_messages);
+        my $fetch_query = qq{
+            SELECT item_message_id, message AS old_message
+            FROM item_messages
+            WHERE item_message_id IN ($id_placeholders)
+        };
+        my $fetch_sth = $dbh->prepare($fetch_query);
+        $fetch_sth->execute(keys %new_messages);
+
+        my %old_messages;
+        while ( my $row = $fetch_sth->fetchrow_hashref ) {
+            $old_messages{ $row->{item_message_id} } = $row->{old_message};
+        }
+
+        $fetch_sth->finish;
+
         my $update_query = qq{
             UPDATE item_messages
             SET message = ?
@@ -313,6 +329,7 @@ sub tool_step3 {
                     itemnumber      => $row->{itemnumber},
                     barcode         => $row->{barcode},
                     title           => $row->{title},
+                    old_message     => $old_messages{ $row->{item_message_id} },
                     message         => $row->{message},
                     type            => $row->{type},
                 };
