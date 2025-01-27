@@ -72,7 +72,7 @@
                         <tr class="notype nomessage">
                             <td>[% INCLUDE 'biblio-title.inc' biblio=item.biblio link=1 %]</td>
                             <td>[% item.barcode | html %]</td>
-                            <td colspan="2" style="background:#FFCCCB;">No item messages to update or delete.</td>
+                            <td colspan="2" style="background:#FFCCCB;">No item messages on this item.</td>
                         </tr>
                 [% END %]
             [% END %]
@@ -94,7 +94,7 @@
 
                     <li>
                         <input type="radio" name="action" value="update_all">
-                        <span style="font-size:125%;font-weight:bold;">Update all with a type of:</span>
+                        <span style="font-size:125%;font-weight:bold;">Update all by type:</span>
                     </li>
                     [% FOREACH av IN AuthorisedValues.Get('ITEM_MESSAGE_TYPE' ) %]
                         <li>

@@ -262,28 +262,24 @@ sub tool_step3 {
 
                 foreach my $itemnumber (@itemnumbers) {
                     $new_messages{$itemnumber}->{$message_type} = $new_message;
-#$new_messages{$itemnumber} = {
-#message => $new_message,
-#type    => $message_type,
-#};
                 }
             }
         }
         return unless keys %new_messages; # No messages to update
                 
         # Fetch old messages for reporting
-        my $id_placeholders = join(',', ('?') x keys %new_messages);
+        my $id_placeholders = join(',', ('?') x keys @itemnumbers);
         my $fetch_query = qq{
-            SELECT item_message_id, message AS old_message
+            SELECT itemnumber, type, message AS old_message
             FROM item_messages
-            WHERE item_message_id IN ($id_placeholders)
+            WHERE itemnumber IN ($id_placeholders)
         };
         my $fetch_sth = $dbh->prepare($fetch_query);
-        $fetch_sth->execute(keys %new_messages);
+        $fetch_sth->execute(@itemnumbers);
 
         my %old_messages;
         while ( my $row = $fetch_sth->fetchrow_hashref ) {
-            $old_messages{ $row->{item_message_id} } = $row->{old_message};
+            $old_messages{ $row->{itemnumber} }->{ $row->{type} } = $row->{old_message};
         }
 
         $fetch_sth->finish;
@@ -291,21 +287,23 @@ sub tool_step3 {
         foreach my $itemnumber (keys %new_messages) {
             foreach my $message_type (keys %{ $new_messages{$itemnumber} }) {
                 my $new_message = $new_messages{$itemnumber}->{$message_type};
+                my $old_message = $old_messages{$itemnumber}->{$message_type};
+                if ( $new_message ne $old_message ) {
+                    eval {
+                        # Delete existing message of this type for the itemnumber
+                        my $delete_query = qq{
+                            DELETE FROM item_messages
+                            WHERE itemnumber = ? AND type = ?
+                        };
+                        $dbh->do($delete_query, undef, $itemnumber, $message_type);
 
-                eval {
-                    # Delete existing message of this type for the itemnumber
-                    my $delete_query = qq{
-                        DELETE FROM item_messages
-                        WHERE itemnumber = ? AND type = ?
+                        # Insert the new message
+                        my $insert_query = qq{
+                            INSERT INTO item_messages (itemnumber, message, type)
+                            VALUES (?, ?, ?)
+                        };
+                        $dbh->do($insert_query, undef, $itemnumber, $new_message, $message_type);
                     };
-                    $dbh->do($delete_query, undef, $itemnumber, $message_type);
-
-                    # Insert the new message
-                    my $insert_query = qq{
-                        INSERT INTO item_messages (itemnumber, message, type)
-                        VALUES (?, ?, ?)
-                    };
-                    $dbh->do($insert_query, undef, $itemnumber, $new_message, $message_type);
                 };
                 if ($@) {
                     warn "Failed to process itemnumber $itemnumber for type $message_type: $@";
@@ -323,7 +321,7 @@ sub tool_step3 {
                 FROM item_messages im
                 JOIN items i ON im.itemnumber = i.itemnumber
                 LEFT JOIN biblio b ON i.biblionumber = b.biblionumber
-                WHERE im.item_message_id IN ($id_placeholders)
+                WHERE im.itemnumber IN ($id_placeholders)
             };
 
             my $select_sth = $dbh->prepare($select_query);
@@ -332,19 +330,27 @@ sub tool_step3 {
             # Collect updated items for reporting
             while (my $row = $select_sth->fetchrow_hashref) {
                 next unless $row;
-                push @updated_items, {
-                    item_message_id => $row->{item_message_id},
-                    itemnumber      => $row->{itemnumber},
-                    barcode         => $row->{barcode},
-                    title           => $row->{title},
-                    old_message     => $old_messages{ $row->{item_message_id} },
-                    message         => $row->{message},
-                    type            => $row->{type},
-                };
+
+                my $itemnumber  = $row->{itemnumber};
+                my $type        = $row->{type};
+                my $old_message = $old_messages{$itemnumber}->{$type};
+                my $new_message = $row->{message};
+                warn 'new:' . Data::Dumper::Dumper( $new_message );
+                warn 'old:' . Data::Dumper::Dumper( $old_message );
+                if ( ( $new_message ne $old_message )  ) {
+                    push @updated_items, {
+                        item_message_id => $row->{item_message_id},
+                        itemnumber      => $row->{itemnumber},
+                        barcode         => $row->{barcode},
+                        title           => $row->{title},
+                        old_message     => $old_messages{ $row->{itemnumber} }->{ $row->{type} },
+                        message         => $row->{message},
+                        type            => $row->{type},
+                    };
+                }
             }
             $select_sth->finish;
         }
-
     } elsif ( $action eq 'delete' )  {
         unless (@itemnumbers) {
             warn "No itemnumbers provided!";
