@@ -228,10 +228,8 @@ sub tool_step2 {
     }
 
     my @scanned_items = values %items_data;
-    my @distinct_message_types = map { { type => $_, item_message_ids => $message_types{$_} } } keys %message_types;
 
     $template->param(
-        distinct_message_types => \@distinct_message_types,
         scanned_items => \@scanned_items,
     );   
 
@@ -262,12 +260,12 @@ sub tool_step3 {
 
                 next unless $checkbox_checked;
 
-                # Find associated item_message_ids for this type
-                foreach my $item_message_id (@item_message_ids) {
-                    my $data_type = $cgi->param("data_message_type_$item_message_id");
-                    if ($data_type && $data_type eq $message_type) {
-                        $new_messages{$item_message_id} = $new_message;
-                    }
+                foreach my $itemnumber (@itemnumbers) {
+                    $new_messages{$itemnumber}->{$message_type} = $new_message;
+#$new_messages{$itemnumber} = {
+#message => $new_message,
+#type    => $message_type,
+#};
                 }
             }
         }
@@ -290,20 +288,30 @@ sub tool_step3 {
 
         $fetch_sth->finish;
 
-        my $update_query = qq{
-            UPDATE item_messages
-            SET message = ?
-            WHERE item_message_id = ?
-        };
-        my $sth = $dbh->prepare($update_query) or die "Prepare failed: $DBI::errstr";
+        foreach my $itemnumber (keys %new_messages) {
+            foreach my $message_type (keys %{ $new_messages{$itemnumber} }) {
+                my $new_message = $new_messages{$itemnumber}->{$message_type};
 
-        # Execute updates
-        foreach my $item_message_id (keys %new_messages) {
-            my $new_message = $new_messages{$item_message_id};
-            $sth->execute($new_message, $item_message_id);
+                eval {
+                    # Delete existing message of this type for the itemnumber
+                    my $delete_query = qq{
+                        DELETE FROM item_messages
+                        WHERE itemnumber = ? AND type = ?
+                    };
+                    $dbh->do($delete_query, undef, $itemnumber, $message_type);
+
+                    # Insert the new message
+                    my $insert_query = qq{
+                        INSERT INTO item_messages (itemnumber, message, type)
+                        VALUES (?, ?, ?)
+                    };
+                    $dbh->do($insert_query, undef, $itemnumber, $new_message, $message_type);
+                };
+                if ($@) {
+                    warn "Failed to process itemnumber $itemnumber for type $message_type: $@";
+                }
+            }
         }
-
-        $sth->finish;
 
         if (%new_messages) {
             # Prepare placeholders for item_message_ids

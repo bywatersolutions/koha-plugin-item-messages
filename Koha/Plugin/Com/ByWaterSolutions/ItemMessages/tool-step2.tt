@@ -96,17 +96,18 @@
                         <input type="radio" name="action" value="update_all">
                         <span style="font-size:125%;font-weight:bold;">Update all with a type of:</span>
                     </li>
-                    [% FOREACH type_data IN distinct_message_types %]
+                    [% FOREACH av IN AuthorisedValues.Get('ITEM_MESSAGE_TYPE' ) %]
                         <li>
-                            <span class="badge text-bg-success">[% type_data.type | html %]</span>
+                            <span class="badge text-bg-success">[% av.authorised_value | html %]</span>
                             <span>New message:</span>
-                            <input id="new_message_[% type_data.type | html %]" name="new_message_[% type_data.type | html %]" type="text" />
-                            <input type="checkbox" id="new_type_[% type_data.type | html %]" class="new_type" name="checkbox_[% type_data.type | html %]" value="1" data-message-type="[% type_data.type | html %]">
-                            [% FOREACH id IN type_data.item_message_ids %]
-                                <input type="hidden" name="item_message_id" value="[% id %]">
-                                <input type="hidden" name="data_message_type_[% id %]" value="[% type_data.type %]">
-                            [% END %]
+                            <input id="new_message_[% av.authorised_value | html %]" name="new_message_[% av.authorised_value | html %]" type="text" />
+                            <input type="checkbox" id="new_type_[% av.authorised_value | html %]" class="new_type" name="checkbox_[% av.authorised_value | html %]" value="1" data-message-type="[% av.authorised_value | html %]">
                         </li>
+
+                    [% END %]
+                    [% FOREACH item IN scanned_items %]
+                        <input type="hidden" name="item_message_id_[% item.itemnumber | html %]" value="[% item.itemnumber | html %]">
+                        <input type="hidden" name="data_message_type_[% item.itemnumber | html %]" value="">
                     [% END %]
                     </ol>
                 </fieldset>
