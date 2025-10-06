@@ -40,10 +40,10 @@ $(document).ready(function() {
                 });
 
                 $(`
-				<div class="rows">
+				<div class="listgroup">
 					<div id="item-messages-${itemnumber}" class="item-messages"></div>
 				</div>
-			`).insertAfter( $(this).siblings('.rows') );
+			`).appendTo( $(this).siblings('.page-section') );
 
                 ReactDOM.render(
                     html `<${ItemMessages} itemnumber=${itemnumber} messages=${messages} />`,
