@@ -43,7 +43,7 @@ $(document).ready(function() {
 				<div class="listgroup">
 					<div id="item-messages-${itemnumber}" class="item-messages"></div>
 				</div>
-			`).appendTo( $(this).siblings('.page-section') );
+			`).prependTo( $(this).siblings('.page-section') );
 
                 ReactDOM.render(
                     html `<${ItemMessages} itemnumber=${itemnumber} messages=${messages} />`,
