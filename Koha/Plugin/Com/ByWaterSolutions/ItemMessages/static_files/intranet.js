@@ -25,31 +25,47 @@ $(document).ready(function() {
         });
 
         Promise.all([promise1]).then(() => {
-            $("#catalogue_detail_biblio h3[id^=item]").each(function() {
-                const parts = this.id.split('item');
-                const itemnumber = parts[1];
-
-                let messages;
-                $.ajax({
-                    dataType: "json",
-                    url: `/api/v1/contrib/item_messages/items/${itemnumber}/messages`,
-                    async: false,
-                    success: function(m) {
-                        messages = m;
+            const itemElements = document.querySelectorAll("#catalogue_detail_biblio h3[id^=item]");
+            
+            const observer = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const itemElement = entry.target;
+                        const itemnumber = itemElement.id.replace('item', '');
+                        
+                        // Stop observing this element since we're loading its messages now
+                        observer.unobserve(itemElement);
+                        
+                        // Create the container for messages
+                        const container = document.createElement('div');
+                        container.className = 'listgroup';
+                        container.innerHTML = `<div id="item-messages-${itemnumber}" class="item-messages"></div>`;
+                        
+                        // Insert the container before the next sibling of the item header
+                        itemElement.parentNode.insertBefore(container, itemElement.nextSibling);
+                        
+                        // Load messages for this item
+                        $.ajax({
+                            dataType: "json",
+                            url: `/api/v1/contrib/item_messages/items/${itemnumber}/messages`,
+                            success: function(messages) {
+                                ReactDOM.render(
+                                    html `<${ItemMessages} itemnumber=${itemnumber} messages=${messages || []} />`,
+                                    document.getElementById(`item-messages-${itemnumber}`)
+                                );
+                            }
+                        });
                     }
                 });
+            }, {
+                root: null, // viewport
+                rootMargin: '0px',
+                threshold: 0.1 // Trigger when at least 10% of the element is visible
+            });
 
-                $(`
-				<div class="listgroup">
-					<div id="item-messages-${itemnumber}" class="item-messages"></div>
-				</div>
-			`).prependTo( $(this).siblings('.page-section') );
-
-                ReactDOM.render(
-                    html `<${ItemMessages} itemnumber=${itemnumber} messages=${messages} />`,
-                    document.getElementById(`item-messages-${itemnumber}`)
-                );
-
+            // Start observing each item element
+            itemElements.forEach(itemElement => {
+                observer.observe(itemElement);
             });
         });
     }
